@@ -1,4 +1,4 @@
-# YouTube Thumbnail View
+# Sticky Header Grid Layout Manager
 
 ## Author
 
