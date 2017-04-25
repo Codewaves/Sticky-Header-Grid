@@ -1,0 +1,55 @@
+apply plugin: 'com.android.library'
+apply from: '../dependencies.gradle'
+
+ext {
+    bintrayRepo = 'maven'
+    bintrayName = 'sticky-header-grid'
+
+    publishedGroupId = 'com.codewaves.stickyheadergrid'
+    libraryName = 'Sticky-Header-Grid'
+    artifact = 'library'
+
+    libraryDescription = 'Sticky header grid layout manager for RecycleView'
+
+    siteUrl = 'https://github.com/Codewaves/Sticky-Header-Grid'
+    gitUrl = 'https://github.com/Codewaves/Sticky-Header-Grid.git'
+
+    libraryVersion = versions.publishVersion
+
+    developerId = 'codewaves'
+    developerName = 'Sergej Kravcenko'
+    developerEmail = 'skravcenko@codewaves.com'
+
+    licenseName = 'The MIT License'
+    licenseUrl = 'https://opensource.org/licenses/mit-license.php'
+    allLicenses = ["MIT"]
+}
+
+android {
+    compileSdkVersion versions.compileSdk
+    buildToolsVersion versions.buildTools
+
+    defaultConfig {
+        minSdkVersion versions.minSdk
+        targetSdkVersion versions.compileSdk
+        versionCode versions.publishVersionCode
+        versionName versions.publishVersion
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+    lintOptions {
+        lintConfig file("../lint.xml")
+    }
+}
+
+dependencies {
+    compile 'com.android.support:support-annotations:' + versions.supportLib
+    compile 'com.android.support:appcompat-v7:' + versions.supportLib
+    compile 'com.android.support:design:' + versions.supportLib
+}
+
+apply from: '../install.gradle'
+apply from: '../bintray.gradle'

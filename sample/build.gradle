@@ -1,0 +1,30 @@
+apply plugin: 'com.android.application'
+apply from: '../dependencies.gradle'
+
+android {
+    compileSdkVersion versions.compileSdk
+    buildToolsVersion versions.buildTools
+
+    defaultConfig {
+        applicationId "com.codewaves.stickyheadergrid.sample"
+        minSdkVersion versions.minSdk
+        targetSdkVersion versions.compileSdk
+        versionCode versions.publishVersionCode
+        versionName versions.publishVersion
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            shrinkResources false
+        }
+    }
+    lintOptions {
+        lintConfig file("../lint.xml")
+    }
+}
+
+dependencies {
+    compile 'com.android.support:appcompat-v7:' + versions.supportLib
+    compile 'com.android.support:design:' + versions.supportLib
+    compile project(':stickyheadergrid')
+}
