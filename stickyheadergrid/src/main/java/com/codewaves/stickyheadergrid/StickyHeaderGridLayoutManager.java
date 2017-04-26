@@ -131,31 +131,41 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
       }
    }
 
+   private int getSpanWidth(int recyclerWidth, int spanIndex, int spanSize) {
+      final int spanWidth = recyclerWidth / mSpanCount;
+      final int spanWidthReminder = recyclerWidth - spanWidth * mSpanCount;
+      final int widthCorrection = Math.min(Math.max(0, spanWidthReminder - spanIndex), spanSize);
+
+      return spanWidth * spanSize + widthCorrection;
+   }
+
    private View fillBottomRow(RecyclerView.Recycler recycler, RecyclerView.State state, int adapterPosition, int top) {
-      final int contentWidth = getWidth() - getPaddingLeft() - getPaddingRight();
+      final int recyclerWidth = getWidth() - getPaddingLeft() - getPaddingRight();
       int left = getPaddingLeft();
-      int spanRemainder = mSpanCount;
-      View bottomView = null;
+      int spanIndex = 0;
+      View v = null;
 
-      while (spanRemainder > 0) {
-         bottomView = recycler.getViewForPosition(adapterPosition);
-         addView(bottomView, mHeadersStartPosition++);
-         measureChildWithMargins(bottomView, contentWidth / mSpanCount * 2, 0);
+      while (spanIndex < mSpanCount) {
+         final int spanWidth = getSpanWidth(recyclerWidth, spanIndex, 1);
 
-         final int height = getDecoratedMeasuredHeight(bottomView);
-         final int width = getDecoratedMeasuredWidth(bottomView);
-         layoutDecorated(bottomView, left, top, left + width, top + height);
-         left += contentWidth / mSpanCount;
+         v = recycler.getViewForPosition(adapterPosition);
+         addView(v, mHeadersStartPosition++);
+         measureChildWithMargins(v, recyclerWidth - spanWidth, 0);
+
+         final int height = getDecoratedMeasuredHeight(v);
+         final int width = getDecoratedMeasuredWidth(v);
+         layoutDecorated(v, left, top, left + width, top + height);
+         left += spanWidth;
 
          // Check next
          adapterPosition++;
          if (adapterPosition >= state.getItemCount() || mAdapter.getItemViewInternalType(adapterPosition) != StickyHeaderGridAdapter.TYPE_ITEM) {
             break;
          }
-         spanRemainder -= 1;
+         spanIndex += 1;
       }
 
-      return bottomView;
+      return v;
    }
 
    @Override
