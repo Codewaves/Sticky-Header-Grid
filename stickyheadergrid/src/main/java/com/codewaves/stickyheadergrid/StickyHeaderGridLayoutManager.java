@@ -16,6 +16,7 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
    public static final String TAG = "StickyLayoutManager";
 
    private int mSpanCount;
+   private SpanSizeLookup mSpanSizeLookup = new DefaultSpanSizeLookup();
 
    private StickyHeaderGridAdapter mAdapter;
 
@@ -28,11 +29,38 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
    private int mFloatingHeaderPosition;
    private int mStickOffset;
 
+   /**
+    * Creates a vertical StickyHeaderGridLayoutManager
+    *
+    * @param spanCount The number of columns in the grid
+    */
    public StickyHeaderGridLayoutManager(int spanCount) {
       mSpanCount = spanCount;
       if (spanCount < 1) {
          throw new IllegalArgumentException("Span count should be at least 1. Provided " + spanCount);
       }
+   }
+
+   /**
+    * Sets the source to get the number of spans occupied by each item in the adapter.
+    *
+    * @param spanSizeLookup {@link StickyHeaderGridLayoutManager.SpanSizeLookup} instance to be used to query number of spans
+    *                       occupied by each item
+    */
+   public void setSpanSizeLookup(SpanSizeLookup spanSizeLookup) {
+      mSpanSizeLookup = spanSizeLookup;
+      if (mSpanSizeLookup == null) {
+         mSpanSizeLookup = new DefaultSpanSizeLookup();
+      }
+   }
+
+   /**
+    * Returns the current {@link StickyHeaderGridLayoutManager.SpanSizeLookup} used by the StickyHeaderGridLayoutManager.
+    *
+    * @return The current {@link StickyHeaderGridLayoutManager.SpanSizeLookup} used by the StickyHeaderGridLayoutManager.
+    */
+   public SpanSizeLookup getSpanSizeLookup() {
+      return mSpanSizeLookup;
    }
 
    @Override
@@ -63,6 +91,26 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
    @Override
    public RecyclerView.LayoutParams generateDefaultLayoutParams() {
       return new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+   }
+
+   @Override
+   public RecyclerView.LayoutParams generateLayoutParams(Context c, AttributeSet attrs) {
+      return new LayoutParams(c, attrs);
+   }
+
+   @Override
+   public RecyclerView.LayoutParams generateLayoutParams(ViewGroup.LayoutParams lp) {
+      if (lp instanceof ViewGroup.MarginLayoutParams) {
+         return new LayoutParams((ViewGroup.MarginLayoutParams)lp);
+      }
+      else {
+         return new LayoutParams(lp);
+      }
+   }
+
+   @Override
+   public boolean checkLayoutParams(RecyclerView.LayoutParams lp) {
+      return lp instanceof LayoutParams;
    }
 
    @Override
@@ -146,9 +194,21 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
       View v = null;
 
       while (spanIndex < mSpanCount) {
-         final int spanWidth = getSpanWidth(recyclerWidth, spanIndex, 1);
+         // Get item span
+         final int section = mAdapter.getPositionSection(adapterPosition);
+         int spanSize = mSpanSizeLookup.getSpanSize(section, mAdapter.getItemSectionPosition(section, adapterPosition));
+         spanSize = Math.max(0, Math.min(spanSize, mSpanCount));
+         if (mSpanCount - spanIndex < spanSize) {
+            return v;
+         }
 
+         // Create view and fill layout params
+         final int spanWidth = getSpanWidth(recyclerWidth, spanIndex, spanSize);
          v = recycler.getViewForPosition(adapterPosition);
+         final LayoutParams params = (LayoutParams)v.getLayoutParams();
+         params.mSpanIndex = spanIndex;
+         params.mSpanSize = spanSize;
+
          addView(v, mHeadersStartPosition++);
          measureChildWithMargins(v, recyclerWidth - spanWidth, 0);
 
@@ -162,7 +222,7 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
          if (adapterPosition >= state.getItemCount() || mAdapter.getItemViewInternalType(adapterPosition) != StickyHeaderGridAdapter.TYPE_ITEM) {
             break;
          }
-         spanIndex += 1;
+         spanIndex += spanSize;
       }
 
       return v;
@@ -448,5 +508,16 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
       public int getSpanSize() {
          return mSpanSize;
       }
+   }
+
+   public static final class DefaultSpanSizeLookup implements SpanSizeLookup {
+      @Override
+      public int getSpanSize(int section, int position) {
+         return 1;
+      }
+   }
+
+   public interface SpanSizeLookup {
+      int getSpanSize(int section, int position);
    }
 }

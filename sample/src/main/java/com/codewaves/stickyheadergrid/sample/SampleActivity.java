@@ -19,14 +19,14 @@ public class SampleActivity extends AppCompatActivity {
       // Setup recycler
       final RecyclerView recycler = (RecyclerView)findViewById(R.id.recycler);
       final StickyHeaderGridLayoutManager layoutManager = new StickyHeaderGridLayoutManager(3);
-      /*layoutManager.setSpanSizeLookup(new GridLayoutManager.SpanSizeLookup() {
+      layoutManager.setSpanSizeLookup(new StickyHeaderGridLayoutManager.SpanSizeLookup() {
          @Override
-         public int getSpanSize(int position) {
+         public int getSpanSize(int section, int position) {
             return (3 - position % 3);
          }
-      });*/
+      });
       recycler.addItemDecoration(new DividerItemDecoration(this, VERTICAL));
       recycler.setLayoutManager(layoutManager);
-      recycler.setAdapter(new SampleAdapter(5));
+      recycler.setAdapter(new SampleAdapter(6));
    }
 }
