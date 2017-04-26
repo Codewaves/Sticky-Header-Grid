@@ -83,6 +83,13 @@ public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGr
       }
    }
 
+   int getItemViewInternalType(int position) {
+      final int section = getPositionSection(position);
+      final Section sectionObject = mSections.get(section);
+      final int sectionPosition = position - sectionObject.position;
+
+      return getItemViewInternalType(section, sectionPosition);
+   }
 
    private int getItemViewInternalType(int section, int position) {
       return position == 0 ? TYPE_HEADER : TYPE_ITEM;
@@ -102,30 +109,6 @@ public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGr
          calculateSections();
       }
       return mTotalItemNumber;
-   }
-
-   @Override
-   public int getItemViewType(int position) {
-      if (mSections == null) {
-         calculateSections();
-      }
-
-      final int sectionIndex = mSectionIndices[position];
-      final Section section = mSections.get(sectionIndex);
-      final int sectionPosition = position - section.position;
-      final int internalType = getItemViewInternalType(sectionIndex, sectionPosition);
-      int externalType = 0;
-
-      switch (internalType) {
-         case TYPE_HEADER:
-            externalType = getSectionHeaderType(sectionIndex);
-            break;
-         case TYPE_ITEM:
-            externalType = getSectionItemType(sectionIndex, sectionPosition - 1);
-            break;
-      }
-
-      return ((externalType & 0xFF) << 8) | (internalType & 0xFF);
    }
 
    @Override
@@ -167,6 +150,26 @@ public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGr
          default:
             throw new InvalidParameterException("invalid viewType: " + internalType);
       }
+   }
+
+   @Override
+   public int getItemViewType(int position) {
+      final int section = getPositionSection(position);
+      final Section sectionObject = mSections.get(section);
+      final int sectionPosition = position - sectionObject.position;
+      final int internalType = getItemViewInternalType(section, sectionPosition);
+      int externalType = 0;
+
+      switch (internalType) {
+         case TYPE_HEADER:
+            externalType = getSectionHeaderType(section);
+            break;
+         case TYPE_ITEM:
+            externalType = getSectionItemType(section, sectionPosition - 1);
+            break;
+      }
+
+      return ((externalType & 0xFF) << 8) | (internalType & 0xFF);
    }
 
    // Helpers

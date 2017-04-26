@@ -85,21 +85,24 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
          firstAdapterPosition = 0;
       }
 
-      int height;
-      int top = getPaddingTop();
       int left = getPaddingLeft();
       int right = getWidth() - getPaddingRight();
       final int bottom = getHeight() - getPaddingBottom();
       int totalHeight = 0;
 
-      for (int adapterPosition = firstAdapterPosition; adapterPosition < state.getItemCount(); adapterPosition++) {
-         final View v = recycler.getViewForPosition(adapterPosition);
+      while (true) {
+         final int adapterPosition = mBottomView == null ? firstAdapterPosition : getPosition(mBottomView) + 1;
+         if (adapterPosition >= state.getItemCount()) {
+            break;
+         }
 
-         final int viewType = getViewType(v);
+         final int top = mBottomView == null ? getPaddingTop() : getDecoratedBottom(mBottomView);
+         final int viewType = mAdapter.getItemViewInternalType(adapterPosition);
          if (viewType == StickyHeaderGridAdapter.TYPE_HEADER) {
+            final View v = recycler.getViewForPosition(adapterPosition);
             addView(v, mHeadersStartPosition);
             measureChildWithMargins(v, 0, 0);
-            height = getDecoratedMeasuredHeight(v);
+            final int height = getDecoratedMeasuredHeight(v);
             layoutDecorated(v, left, top, right, top + height);
 
             if (mTopView == null) {
@@ -108,33 +111,51 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
             mBottomView = v;
          }
          else {
-            addView(v, mHeadersStartPosition);
-            measureChildWithMargins(v, 0, 0);
-            height = getDecoratedMeasuredHeight(v);
-            layoutDecorated(v, left, top, right, top + height);
-
+            final View v = fillBottomRow(recycler, state, adapterPosition, top);
             if (mTopView == null) {
                mTopView = v;
             }
             mBottomView = v;
-            mHeadersStartPosition++;
          }
 
-         top += height;
-         totalHeight += height;
-
-         if (getDecoratedBottom(v) >= bottom) {
+         if (getDecoratedBottom(mBottomView) >= bottom) {
             break;
          }
       }
 
-      int recyclerHeight = getHeight() - (getPaddingTop() + getPaddingBottom());
-      if (totalHeight < recyclerHeight) {
-         scrollVerticallyBy(totalHeight - recyclerHeight, recycler, state);
+      if (getDecoratedBottom(mBottomView) < bottom) {
+         scrollVerticallyBy(getDecoratedBottom(mBottomView) - bottom, recycler, state);
       }
       else {
          stickTopHeader(recycler);
       }
+   }
+
+   private View fillBottomRow(RecyclerView.Recycler recycler, RecyclerView.State state, int adapterPosition, int top) {
+      final int contentWidth = getWidth() - getPaddingLeft() - getPaddingRight();
+      int left = getPaddingLeft();
+      int spanRemainder = mSpanCount;
+      View bottomView = null;
+
+      while (spanRemainder > 0) {
+         bottomView = recycler.getViewForPosition(adapterPosition);
+         addView(bottomView, mHeadersStartPosition++);
+         measureChildWithMargins(bottomView, contentWidth / mSpanCount * 2, 0);
+
+         final int height = getDecoratedMeasuredHeight(bottomView);
+         final int width = getDecoratedMeasuredWidth(bottomView);
+         layoutDecorated(bottomView, left, top, left + width, top + height);
+         left += contentWidth / mSpanCount;
+
+         // Check next
+         adapterPosition++;
+         if (adapterPosition >= state.getItemCount() || mAdapter.getItemViewInternalType(adapterPosition) != StickyHeaderGridAdapter.TYPE_ITEM) {
+            break;
+         }
+         spanRemainder -= 1;
+      }
+
+      return bottomView;
    }
 
    @Override
@@ -169,22 +190,17 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
                break;
             }
 
-            final View v = recycler.getViewForPosition(adapterPosition);
-            mBottomView = v;
-
-            final int viewType = getViewType(v);
+            final int viewType = mAdapter.getItemViewInternalType(adapterPosition);
             if (viewType == StickyHeaderGridAdapter.TYPE_HEADER) {
+               final View v = recycler.getViewForPosition(adapterPosition);
                addView(v, mHeadersStartPosition);
                measureChildWithMargins(v, 0, 0);
                final int height = getDecoratedMeasuredHeight(v);
                layoutDecorated(v, left, top, right, top + height);
+               mBottomView = v;
             }
             else {
-               addView(v, mHeadersStartPosition);
-               measureChildWithMargins(v, 0, 0);
-               final int height = getDecoratedMeasuredHeight(v);
-               layoutDecorated(v, left, top, right, top + height);
-               mHeadersStartPosition++;
+               mBottomView = fillBottomRow(recycler, state, adapterPosition, top);
             }
          }
       }
@@ -376,6 +392,10 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
 
    private int getViewType(View view) {
       return getItemViewType(view) & 0xFF;
+   }
+
+   private int getViewType(int position) {
+      return mAdapter.getItemViewType(position) & 0xFF;
    }
 
    private void clearState() {
