@@ -187,6 +187,14 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
       return spanWidth * spanSize + widthCorrection;
    }
 
+   private int getSpanLeft(int recyclerWidth, int spanIndex) {
+      final int spanWidth = recyclerWidth / mSpanCount;
+      final int spanWidthReminder = recyclerWidth - spanWidth * mSpanCount;
+      final int widthCorrection = Math.min(spanWidthReminder, spanIndex);
+
+      return spanWidth * spanIndex + widthCorrection;
+   }
+
    private View fillBottomRow(RecyclerView.Recycler recycler, RecyclerView.State state, int adapterPosition, int top) {
       final int recyclerWidth = getWidth() - getPaddingLeft() - getPaddingRight();
       int left = getPaddingLeft();
@@ -223,6 +231,47 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
             break;
          }
          spanIndex += spanSize;
+      }
+
+      return v;
+   }
+
+   private View fillTopRow(RecyclerView.Recycler recycler, RecyclerView.State state, int adapterPosition, int top) {
+      final int recyclerWidth = getWidth() - getPaddingLeft() - getPaddingRight();
+      final int section = mAdapter.getPositionSection(adapterPosition);
+      int sectionPosition = mAdapter.getItemSectionPosition(section, adapterPosition);
+      int spanSize = mSpanSizeLookup.getSpanSize(section, sectionPosition);
+      int spanIndex = mSpanSizeLookup.getSpanIndex(mAdapter.getPositionSection(adapterPosition),
+            mAdapter.getItemSectionPosition(section, adapterPosition),
+            mSpanCount);
+      View v = null;
+
+      while (spanIndex >= 0) {
+         // Create view and fill layout params
+         final int spanWidth = getSpanWidth(recyclerWidth, spanIndex, spanSize);
+         v = recycler.getViewForPosition(adapterPosition);
+         final LayoutParams params = (LayoutParams)v.getLayoutParams();
+         params.mSpanIndex = spanIndex;
+         params.mSpanSize = spanSize;
+
+         addView(v, 0);
+         mHeadersStartPosition++;
+         measureChildWithMargins(v, recyclerWidth - spanWidth, 0);
+
+         final int height = getDecoratedMeasuredHeight(v);
+         final int width = getDecoratedMeasuredWidth(v);
+         final int left = getPaddingLeft() + getSpanLeft(recyclerWidth, spanIndex);
+         layoutDecorated(v, left, top - height, left + width, top);
+
+         // Check next
+         adapterPosition--;
+         sectionPosition--;
+         if (sectionPosition < 0) {
+            break;
+         }
+
+         spanSize = mSpanSizeLookup.getSpanSize(section, sectionPosition);
+         spanIndex -= spanSize;
       }
 
       return v;
@@ -288,28 +337,24 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
                break;
             }
 
+            // Reattach floating header if needed
             if (mFloatingHeaderView != null && adapterPosition == mFloatingHeaderPosition) {
                removeAndRecycleView(mFloatingHeaderView, recycler);
                mFloatingHeaderView = null;
                mFloatingHeaderPosition = -1;
             }
 
-            final View v = recycler.getViewForPosition(adapterPosition);
-            mTopView = v;
-
-            final int viewType = getViewType(v);
+            final int viewType = mAdapter.getItemViewInternalType(adapterPosition);
             if (viewType == StickyHeaderGridAdapter.TYPE_HEADER) {
+               final View v = recycler.getViewForPosition(adapterPosition);
                addView(v);
                measureChildWithMargins(v, 0, 0);
                final int height = getDecoratedMeasuredHeight(v);
                layoutDecorated(v, left, top - height, right, top);
+               mTopView = v;
             }
             else {
-               addView(v, 0);
-               measureChildWithMargins(v, 0, 0);
-               final int height = getDecoratedMeasuredHeight(v);
-               layoutDecorated(v, left, top - height, right, top);
-               mHeadersStartPosition++;
+               mTopView = fillTopRow(recycler, state, adapterPosition, top);
             }
          }
       }
@@ -510,14 +555,77 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
       }
    }
 
-   public static final class DefaultSpanSizeLookup implements SpanSizeLookup {
+   public static final class DefaultSpanSizeLookup extends SpanSizeLookup {
       @Override
       public int getSpanSize(int section, int position) {
          return 1;
       }
+
+      @Override
+      public int getSpanIndex(int section, int position, int spanCount) {
+         return position % spanCount;
+      }
    }
 
-   public interface SpanSizeLookup {
-      int getSpanSize(int section, int position);
+   /**
+    * An interface to provide the number of spans each item occupies.
+    * <p>
+    * Default implementation sets each item to occupy exactly 1 span.
+    *
+    * @see StickyHeaderGridLayoutManager#setSpanSizeLookup(StickyHeaderGridLayoutManager.SpanSizeLookup)
+    */
+   public static abstract class SpanSizeLookup {
+      /**
+       * Returns the number of span occupied by the item in <code>section</code> at <code>position</code>.
+       *
+       * @param section The adapter section of the item
+       * @param position The adapter position of the item in section
+       * @return The number of spans occupied by the item at the provided section and position
+       */
+      abstract public int getSpanSize(int section, int position);
+
+      /**
+       * Returns the final span index of the provided position.
+       *
+       * <p>
+       * If you override this method, you need to make sure it is consistent with
+       * {@link #getSpanSize(int, int)}. StickyHeaderGridLayoutManager does not call this method for
+       * each item. It is called only for the reference item and rest of the items
+       * are assigned to spans based on the reference item. For example, you cannot assign a
+       * position to span 2 while span 1 is empty.
+       * <p>
+       *
+       * @param section The adapter section of the item
+       * @param position  The adapter position of the item in section
+       * @param spanCount The total number of spans in the grid
+       * @return The final span position of the item. Should be between 0 (inclusive) and
+       * <code>spanCount</code>(exclusive)
+       */
+      public int getSpanIndex(int section, int position, int spanCount) {
+         // TODO: cache them?
+         final int positionSpanSize = getSpanSize(section, position);
+         if (positionSpanSize >= spanCount) {
+            return 0;
+         }
+
+         int spanIndex = 0;
+         for (int i = 0; i < position; ++i) {
+            final int spanSize = getSpanSize(section, i);
+            spanIndex += spanSize;
+
+            if (spanIndex == spanCount) {
+               spanIndex = 0;
+            }
+            else if (spanIndex > spanCount) {
+               spanIndex = spanSize;
+            }
+         }
+
+         if (spanIndex + positionSpanSize <= spanCount) {
+            return spanIndex;
+         }
+
+         return 0;
+      }
    }
 }

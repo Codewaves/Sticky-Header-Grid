@@ -27,6 +27,6 @@ public class SampleActivity extends AppCompatActivity {
       });
       recycler.addItemDecoration(new DividerItemDecoration(this, VERTICAL));
       recycler.setLayoutManager(layoutManager);
-      recycler.setAdapter(new SampleAdapter(6));
+      recycler.setAdapter(new SampleAdapter(5));
    }
 }
