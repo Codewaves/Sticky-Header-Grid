@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:app="http://schemas.android.com/apk/res-auto"
+   xmlns:android="http://schemas.android.com/apk/res/android">
+
+   <item android:id="@+id/action_top"
+      android:title="@string/action_top"/>
+   <item android:id="@+id/action_center"
+      android:title="@string/action_center"/>
+   <item android:id="@+id/action_bottom"
+      android:title="@string/action_bottom"/>
+   <item android:id="@+id/action_top_smooth"
+      android:title="@string/action_top_smooth"/>
+   <item android:id="@+id/action_center_smooth"
+      android:title="@string/action_center_smooth"/>
+   <item android:id="@+id/action_bottom_smooth"
+      android:title="@string/action_bottom_smooth"/>
+</menu>

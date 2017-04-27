@@ -1,3 +1,10 @@
 <resources>
    <string name="app_name">StickyHeaderGrid</string>
+
+   <string name="action_top">Top</string>
+   <string name="action_bottom">Bottom</string>
+   <string name="action_top_smooth">Top Smooth</string>
+   <string name="action_bottom_smooth">Bottom Smooth</string>
+   <string name="action_center">Center</string>
+   <string name="action_center_smooth">Center Smooth</string>
 </resources>

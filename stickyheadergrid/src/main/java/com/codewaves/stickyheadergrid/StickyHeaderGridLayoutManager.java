@@ -3,6 +3,7 @@ package com.codewaves.stickyheadergrid;
 import android.content.Context;
 import android.os.Parcel;
 import android.os.Parcelable;
+import android.support.v7.widget.LinearSmoothScroller;
 import android.support.v7.widget.RecyclerView;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -191,6 +192,39 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
          mPendingSavedState.invalidateAnchor();
       }
       requestLayout();
+   }
+
+   /**
+    * <p>Scroll the RecyclerView to make the position visible.</p>
+    *
+    * <p>RecyclerView will scroll the minimum amount that is necessary to make the
+    * target position visible.
+    *
+    * <p>Note that scroll position change will not be reflected until the next layout call.</p>
+    *
+    * @param section Scroll to this section
+    * @param offset Scroll to this offset inside the section
+    */
+   public void scrollToPosition(int section, int offset) {
+      if (mAdapter != null) {
+         scrollToPosition(mAdapter.getSectionItemPosition(section, offset));
+      }
+   }
+
+   private int getExtraLayoutSpace(RecyclerView.State state) {
+      if (state.hasTargetScrollPosition()) {
+         return getHeight();
+      }
+      else {
+         return 0;
+      }
+   }
+
+   @Override
+   public void smoothScrollToPosition(RecyclerView recyclerView, RecyclerView.State state, int position) {
+      final LinearSmoothScroller linearSmoothScroller = new LinearSmoothScroller(recyclerView.getContext());
+      linearSmoothScroller.setTargetPosition(position);
+      startSmoothScroll(linearSmoothScroller);
    }
 
    @Override
@@ -472,8 +506,6 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
 
    private void clearViewsAndStickHeaders(RecyclerView.Recycler recycler) {
       clearHiddenRows(recycler);
-
-      // Update top/bottom views
       if (getChildCount() > 0) {
          stickTopHeader(recycler);
       }
