@@ -271,4 +271,131 @@ public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGr
    public void onBindItemViewHolder(ItemViewHolder viewHolder, int section, int position, int itemType) {
    }
 
+   // Notify
+   public void notifyAllSectionsDataSetChanged() {
+      calculateSections();
+      notifyDataSetChanged();
+   }
+
+   public void notifySectionDataSetChanged(int section) {
+      calculateSections();
+      if (mSections == null) {
+         notifyAllSectionsDataSetChanged();
+      }
+      else {
+         final Section sectionObject = mSections.get(section);
+         notifyItemRangeChanged(sectionObject.position, sectionObject.length);
+      }
+   }
+
+   public void notifySectionItemRangeInserted(int section, int position, int count) {
+      calculateSections();
+      if (mSections == null) {
+         notifyAllSectionsDataSetChanged();
+      }
+      else {
+         final Section sectionObject = mSections.get(section);
+
+         if (position < 0 || position >= sectionObject.itemNumber) {
+            throw new IndexOutOfBoundsException("Invalid index " + position + ", size is " + sectionObject.itemNumber);
+         }
+         if (position + count > sectionObject.itemNumber) {
+            throw new IndexOutOfBoundsException("Invalid index " + (position + count) + ", size is " + sectionObject.itemNumber);
+         }
+
+         notifyItemRangeInserted(sectionObject.position + position + 1, count);
+      }
+   }
+
+   private void notifySectionItemRangeRemoved(int section, int position, int count) {
+      if (mSections == null) {
+         calculateSections();
+         notifyAllSectionsDataSetChanged();
+      }
+      else {
+         final Section sectionObject = mSections.get(section);
+
+         if (position < 0 || position >= sectionObject.itemNumber) {
+            throw new IndexOutOfBoundsException("Invalid index " + position + ", size is " + sectionObject.itemNumber);
+         }
+         if (position + count > sectionObject.itemNumber) {
+            throw new IndexOutOfBoundsException("Invalid index " + (position + count) + ", size is " + sectionObject.itemNumber);
+         }
+
+         calculateSections();
+         notifyItemRangeRemoved(sectionObject.position + position + 1, count);
+      }
+   }
+
+   public void notifySectionItemChanged(int section, int position) {
+      calculateSections();
+      if (mSections == null) {
+         notifyAllSectionsDataSetChanged();
+      }
+      else {
+         final Section sectionObject = mSections.get(section);
+
+         if (position >= sectionObject.itemNumber) {
+            throw new IndexOutOfBoundsException("Invalid index " + position + ", size is " + sectionObject.itemNumber);
+         }
+
+         notifyItemChanged(sectionObject.position + position + 1);
+      }
+   }
+
+   public void notifySectionItemInserted(int section, int position) {
+      calculateSections();
+      if (mSections == null) {
+         notifyAllSectionsDataSetChanged();
+      }
+      else {
+         final Section sectionObject = mSections.get(section);
+
+         if (position < 0 || position >= sectionObject.itemNumber) {
+            throw new IndexOutOfBoundsException("Invalid index " + position + ", size is " + sectionObject.itemNumber);
+         }
+
+         notifyItemInserted(sectionObject.position + position + 1);
+      }
+   }
+
+   public void notifySectionItemRemoved(int section, int position) {
+      if (mSections == null) {
+         calculateSections();
+         notifyAllSectionsDataSetChanged();
+      }
+      else {
+         final Section sectionObject = mSections.get(section);
+
+         if (position < 0 || position >= sectionObject.itemNumber) {
+            throw new IndexOutOfBoundsException("Invalid index " + position + ", size is " + sectionObject.itemNumber);
+         }
+
+         calculateSections();
+         notifyItemRemoved(sectionObject.position + position + 1);
+      }
+   }
+
+   public void notifySectionInserted(int section) {
+      calculateSections();
+      if (mSections == null) {
+         notifyAllSectionsDataSetChanged();
+      }
+      else {
+         final Section sectionObject = mSections.get(section);
+         notifyItemRangeInserted(sectionObject.position, sectionObject.length);
+      }
+   }
+
+   public void notifySectionRemoved(int section) {
+      if (mSections == null) {
+         calculateSections();
+         notifyAllSectionsDataSetChanged();
+      }
+      else {
+         final Section sectionObject = mSections.get(section);
+         calculateSections();
+         notifyItemRangeRemoved(sectionObject.position, sectionObject.length);
+      }
+   }
 }

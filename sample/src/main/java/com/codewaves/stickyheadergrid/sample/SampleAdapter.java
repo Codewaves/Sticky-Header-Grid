@@ -18,27 +18,31 @@ import java.util.List;
  */
 
 public class SampleAdapter extends StickyHeaderGridAdapter {
-   private List<String> labels;
+   private List<List<String>> labels;
 
-   SampleAdapter(int count) {
-      labels = new ArrayList<>(count);
-      for (int i = 0; i < count; ++i) {
-         String label = String.valueOf(i);
-         for (int p = 0; p < i; ++p) {
-            label += "*\n";
+   SampleAdapter(int sections, int count) {
+      labels = new ArrayList<>(sections);
+      for (int s = 0; s < sections; ++s) {
+         List<String> labels = new ArrayList<>(count);
+         for (int i = 0; i < count; ++i) {
+            String label = String.valueOf(i);
+            for (int p = 0; p < i; ++p) {
+               label += "*\n";
+            }
+            labels.add(label);
          }
-         labels.add(label);
+         this.labels.add(labels);
       }
    }
 
    @Override
    public int getSectionCount() {
-      return 20;
+      return labels.size();
    }
 
    @Override
    public int getSectionItemCount(int section) {
-      return labels.size();
+      return labels.get(section).size();
    }
 
    @Override
@@ -61,13 +65,15 @@ public class SampleAdapter extends StickyHeaderGridAdapter {
    }
 
    @Override
-   public void onBindItemViewHolder(ItemViewHolder viewHolder, int section, int position, int itemType) {
+   public void onBindItemViewHolder(ItemViewHolder viewHolder, final int section, final int position, int itemType) {
       final MyItemViewHolder holder = (MyItemViewHolder)viewHolder;
-      final String label = labels.get(position);
+      final String label = labels.get(section).get(position);
       holder.labelView.setText(label);
       holder.labelView.setOnClickListener(new View.OnClickListener() {
          @Override
          public void onClick(View v) {
+            labels.get(section).remove(position);
+            notifySectionItemRemoved(section, position);
             Toast.makeText(holder.labelView.getContext(), label, Toast.LENGTH_SHORT).show();
          }
       });
