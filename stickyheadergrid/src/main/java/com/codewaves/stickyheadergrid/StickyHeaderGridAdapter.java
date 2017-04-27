@@ -188,7 +188,7 @@ public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGr
 
       final Section sectionObject = mSections.get(section);
       final int localPosition = position - sectionObject.position;
-      if (localPosition > sectionObject.length) {
+      if (localPosition >= sectionObject.length) {
          throw new IndexOutOfBoundsException("localPosition: " + localPosition + " >=" + sectionObject.length);
       }
 

@@ -1,13 +1,17 @@
 package com.codewaves.stickyheadergrid;
 
 import android.content.Context;
+import android.os.Parcel;
+import android.os.Parcelable;
 import android.support.v7.widget.RecyclerView;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 
 import java.util.Arrays;
 
+import static android.support.v7.widget.RecyclerView.NO_POSITION;
 import static com.codewaves.stickyheadergrid.StickyHeaderGridLayoutManager.LayoutParams.INVALID_SPAN_ID;
 
 /**
@@ -34,6 +38,13 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
    private int mStickOffset;
 
    private View mFillViewSet[];
+
+   private SavedState mPendingSavedState;
+   private int mPendingScrollPosition = NO_POSITION;
+   private int mPendingScrollPositionOffset;
+   private int mFirstViewPosition;
+   private int mFirstViewOffset;
+
 
    /**
     * Creates a vertical StickyHeaderGridLayoutManager
@@ -116,6 +127,35 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
    }
 
    @Override
+   public Parcelable onSaveInstanceState() {
+      if (mPendingSavedState != null) {
+         return new SavedState(mPendingSavedState);
+      }
+
+      SavedState state = new SavedState();
+      if (getChildCount() > 0) {
+         state.mAnchorPosition = mFirstViewPosition;
+         state.mAnchorOffset = mFirstViewOffset;
+      }
+      else {
+         state.invalidateAnchor();
+      }
+
+      return state;
+   }
+
+   @Override
+   public void onRestoreInstanceState(Parcelable state) {
+      if (state instanceof SavedState) {
+         mPendingSavedState = (SavedState) state;
+         requestLayout();
+      }
+      else {
+         Log.d(TAG, "invalid saved state class");
+      }
+   }
+
+   @Override
    public boolean checkLayoutParams(RecyclerView.LayoutParams lp) {
       return lp instanceof LayoutParams;
    }
@@ -125,18 +165,66 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
       return true;
    }
 
+   /**
+    * <p>Scroll the RecyclerView to make the position visible.</p>
+    *
+    * <p>RecyclerView will scroll the minimum amount that is necessary to make the
+    * target position visible.
+    *
+    * <p>Note that scroll position change will not be reflected until the next layout call.</p>
+    *
+    * @param position Scroll to this adapter position
+    */
+   @Override
+   public void scrollToPosition(int position) {
+      if (position < 0 || position > getItemCount()) {
+         throw new IndexOutOfBoundsException("adapter position out of range");
+      }
+
+      mPendingScrollPosition = position;
+      mPendingScrollPositionOffset = 0;
+      if (mPendingSavedState != null) {
+         mPendingSavedState.invalidateAnchor();
+      }
+      requestLayout();
+   }
+
    @Override
    public void onLayoutChildren(RecyclerView.Recycler recycler, RecyclerView.State state) {
-      if (state.getItemCount() == 0) {
+      if (mAdapter == null || state.getItemCount() == 0) {
          removeAndRecycleAllViews(recycler);
          return;
       }
+
+      if (mPendingScrollPosition >= 0) {
+         mFirstViewPosition = mPendingScrollPosition;
+         mFirstViewOffset = mPendingScrollPositionOffset;
+         mPendingScrollPosition = NO_POSITION;
+      }
+      else if (mPendingSavedState != null && mPendingSavedState.hasValidAnchor()) {
+         mFirstViewPosition = mPendingSavedState.mAnchorPosition;
+         mFirstViewOffset = mPendingSavedState.mAnchorOffset;
+         mPendingSavedState = null;
+      }
+
+      if (mFirstViewPosition < 0 || mFirstViewPosition > state.getItemCount()) {
+         mFirstViewPosition = 0;
+         mFirstViewOffset = getPaddingTop();
+      }
+
+      if (mFirstViewOffset > 0) {
+         mFirstViewOffset = 0;
+      }
+
       detachAndScrapAttachedViews(recycler);
       clearState();
 
-      int firstAdapterPosition = 0;
-      if (firstAdapterPosition > state.getItemCount()) {
-         firstAdapterPosition = 0;
+      // Make sure mFirstViewPosition is the start of the row
+      final int section = mAdapter.getPositionSection(mFirstViewPosition);
+      int sectionPosition = mAdapter.getItemSectionPosition(section, mFirstViewPosition);
+      while (sectionPosition > 0 && mSpanSizeLookup.getSpanIndex(section, sectionPosition, mSpanCount) != 0) {
+         sectionPosition--;
+         mFirstViewPosition--;
       }
 
       int left = getPaddingLeft();
@@ -145,12 +233,12 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
       int totalHeight = 0;
 
       while (true) {
-         final int adapterPosition = mBottomView == null ? firstAdapterPosition : getPosition(mBottomView) + 1;
+         final int adapterPosition = mBottomView == null ? mFirstViewPosition : getPosition(mBottomView) + 1;
          if (adapterPosition >= state.getItemCount()) {
             break;
          }
 
-         final int top = mBottomView == null ? getPaddingTop() : getDecoratedBottom(mBottomView);
+         final int top = mBottomView == null ? getPaddingTop() + mFirstViewOffset : getDecoratedBottom(mBottomView);
          final int viewType = mAdapter.getItemViewInternalType(adapterPosition);
          if (viewType == StickyHeaderGridAdapter.TYPE_HEADER) {
             final View v = recycler.getViewForPosition(adapterPosition);
@@ -181,8 +269,25 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
          scrollVerticallyBy(getDecoratedBottom(mBottomView) - bottom, recycler, state);
       }
       else {
-         stickTopHeader(recycler);
+         clearViewsAndStickHeaders(recycler);
       }
+   }
+
+   @Override
+   public void onLayoutCompleted(RecyclerView.State state) {
+      super.onLayoutCompleted(state);
+      mPendingSavedState = null;
+   }
+
+   private int findFirstRowItem(int adapterPosition) {
+      final int section = mAdapter.getPositionSection(adapterPosition);
+      int sectionPosition = mAdapter.getItemSectionPosition(section, adapterPosition);
+      while (sectionPosition > 0 && mSpanSizeLookup.getSpanIndex(section, sectionPosition, mSpanCount) != 0) {
+         sectionPosition--;
+         adapterPosition--;
+      }
+
+      return adapterPosition;
    }
 
    private int getSpanWidth(int recyclerWidth, int spanIndex, int spanSize) {
@@ -351,16 +456,6 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
             mHeadersStartPosition--;
          }
       }
-
-      /*for (int i = 0; i < mHeadersStartPosition; ++i) {
-         final View v = getChildAt(i);
-
-         if (getDecoratedBottom(v) < recyclerTop || getDecoratedTop(v) > recyclerBottom) {
-            removeAndRecycleView(v, recycler);
-            mHeadersStartPosition--;
-            i--;
-         }
-      }*/
    }
 
    private void clearHiddenHeaders(RecyclerView.Recycler recycler) {
@@ -376,6 +471,24 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
             i--;
          }
       }
+   }
+
+   private void clearViewsAndStickHeaders(RecyclerView.Recycler recycler) {
+      clearHiddenItems(recycler);
+      clearHiddenHeaders(recycler);
+
+
+      // Update top/bottom views
+      if (getChildCount() > 0) {
+         mTopView = getTopmostView();
+         mBottomView = getBottommostView();
+
+         stickTopHeader(recycler);
+      }
+      else {
+         mTopView = mBottomView = null;
+      }
+      updateTopPosition();
    }
 
    @Override
@@ -460,21 +573,7 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
          }
       }
 
-      clearHiddenItems(recycler);
-      clearHiddenHeaders(recycler);
-
-
-      // Update top/bottom views
-      if (getChildCount() > 0) {
-         mTopView = getTopmostView();
-         mBottomView = getBottommostView();
-
-         stickTopHeader(recycler);
-      }
-      else {
-         mTopView = mBottomView = null;
-      }
-
+      clearViewsAndStickHeaders(recycler);
       return  scrolled;
    }
 
@@ -585,6 +684,23 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
             }
 
             layoutDecorated(mFloatingHeaderView, left, top - offset, right, top + height - offset);
+         }
+      }
+   }
+
+   private void updateTopPosition() {
+      if (getChildCount() == 0) {
+         mFirstViewPosition = 0;
+         mFirstViewOffset = 0;
+      }
+
+      if (mTopView != null) {
+         mFirstViewPosition = getPosition(mTopView);
+         if (getViewType(mTopView) == StickyHeaderGridAdapter.TYPE_HEADER) {
+            mFirstViewOffset = Math.min(getDecoratedTop(mTopView) - getPaddingTop() - mStickOffset, 0);
+         }
+         else {
+            mFirstViewOffset = Math.min(getDecoratedTop(mTopView) - getPaddingTop(), 0);
          }
       }
    }
@@ -712,5 +828,55 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
 
          return 0;
       }
+   }
+
+   public static class SavedState implements Parcelable {
+      int mAnchorPosition;
+      int mAnchorOffset;
+
+      public SavedState() {
+
+      }
+
+      SavedState(Parcel in) {
+         mAnchorPosition = in.readInt();
+         mAnchorOffset = in.readInt();
+      }
+
+      public SavedState(SavedState other) {
+         mAnchorPosition = other.mAnchorPosition;
+         mAnchorOffset = other.mAnchorOffset;
+      }
+
+      boolean hasValidAnchor() {
+         return mAnchorPosition >= 0;
+      }
+
+      void invalidateAnchor() {
+         mAnchorPosition = NO_POSITION;
+      }
+
+      @Override
+      public int describeContents() {
+         return 0;
+      }
+
+      @Override
+      public void writeToParcel(Parcel dest, int flags) {
+         dest.writeInt(mAnchorPosition);
+         dest.writeInt(mAnchorOffset);
+      }
+
+      public static final Parcelable.Creator<SavedState> CREATOR = new Parcelable.Creator<SavedState>() {
+         @Override
+         public SavedState createFromParcel(Parcel in) {
+            return new SavedState(in);
+         }
+
+         @Override
+         public SavedState[] newArray(int size) {
+            return new SavedState[size];
+         }
+      };
    }
 }
