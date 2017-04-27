@@ -432,7 +432,7 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
          if (spanId != lp.mSpanId) {
             if (spanId != INVALID_SPAN_ID && !visible) {
                // Remove whole row
-               for (int i = 0; i < position - rowStart; ++i) {
+               for (int i = 0, n = position - rowStart; i < n; ++i) {
                   removeAndRecycleViewAt(rowStart, recycler);
                   mHeadersStartPosition--;
                   position--;
@@ -451,7 +451,7 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
       }
 
       if (spanId != INVALID_SPAN_ID && !visible) {
-         for (int i = 0; i < position - rowStart; ++i) {
+         for (int i = 0, n = position - rowStart; i < n; ++i) {
             removeAndRecycleViewAt(rowStart, recycler);
             mHeadersStartPosition--;
          }
