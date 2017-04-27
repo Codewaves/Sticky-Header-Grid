@@ -679,42 +679,50 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
          removeFloatingHeader(recycler);
 
          final LayoutRow firstHeaderRow = mLayoutRows.get(firstHeader);
-         final LayoutRow nextHeaderRow = getNextVisibleSectionHeader(firstHeader);
-         int offset = 0;
-         if (nextHeaderRow != null) {
-            final int height = firstHeaderRow.getHeight();
-            offset = Math.min(Math.max(top - nextHeaderRow.top, -height) + height, height);
-         }
+         final int section = mAdapter.getPositionSection(firstHeaderRow.adapterPosition);
+         if (section != -1 && mAdapter.isSectionHeaderSticky(section)) {
+            final LayoutRow nextHeaderRow = getNextVisibleSectionHeader(firstHeader);
+            int offset = 0;
+            if (nextHeaderRow != null) {
+               final int height = firstHeaderRow.getHeight();
+               offset = Math.min(Math.max(top - nextHeaderRow.top, -height) + height, height);
+            }
 
-         mStickOffset = top - firstHeaderRow.top - offset;
-         firstHeaderRow.headerView.offsetTopAndBottom(mStickOffset);
+            mStickOffset = top - firstHeaderRow.top - offset;
+            firstHeaderRow.headerView.offsetTopAndBottom(mStickOffset);
+         }
+         else {
+            mStickOffset = 0;
+         }
       }
       else {
          // We don't have first visible sector header in layout, create floating
          final LayoutRow firstVisibleRow = getFirstVisibleRow();
-         final int section = mAdapter.getPositionSection(firstVisibleRow.adapterPosition);
-         if (section != -1) {
-            final int headerPosition = mAdapter.getSectionHeaderPosition(section);
-            if (mFloatingHeaderView == null || mFloatingHeaderPosition != headerPosition) {
-               removeFloatingHeader(recycler);
+         if (firstVisibleRow != null) {
+            final int section = mAdapter.getPositionSection(firstVisibleRow.adapterPosition);
+            if (section != -1 && mAdapter.isSectionHeaderSticky(section)) {
+               final int headerPosition = mAdapter.getSectionHeaderPosition(section);
+               if (mFloatingHeaderView == null || mFloatingHeaderPosition != headerPosition) {
+                  removeFloatingHeader(recycler);
 
-               // Create floating header
-               final View v = recycler.getViewForPosition(headerPosition);
-               addView(v);
-               measureChildWithMargins(v, 0, 0);
-               mFloatingHeaderView = v;
-               mFloatingHeaderPosition = headerPosition;
+                  // Create floating header
+                  final View v = recycler.getViewForPosition(headerPosition);
+                  addView(v);
+                  measureChildWithMargins(v, 0, 0);
+                  mFloatingHeaderView = v;
+                  mFloatingHeaderPosition = headerPosition;
+               }
+
+               // Push floating header up, if needed
+               final int height = getDecoratedMeasuredHeight(mFloatingHeaderView);
+               int offset = 0;
+               if (getChildCount() - mHeadersStartPosition > 1) {
+                  final View nextHeader = getChildAt(getChildCount() - 2);
+                  offset = Math.max(top - getDecoratedTop(nextHeader), -height) + height;
+               }
+
+               layoutDecorated(mFloatingHeaderView, left, top - offset, right, top + height - offset);
             }
-
-            // Push floating header up, if needed
-            final int height = getDecoratedMeasuredHeight(mFloatingHeaderView);
-            int offset = 0;
-            if (getChildCount() - mHeadersStartPosition > 1) {
-               final View nextHeader = getChildAt(getChildCount() - 2);
-               offset = Math.max(top - getDecoratedTop(nextHeader), -height) + height;
-            }
-
-            layoutDecorated(mFloatingHeaderView, left, top - offset, right, top + height - offset);
          }
       }
    }

@@ -257,6 +257,10 @@ public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGr
       return 0;
    }
 
+   public boolean isSectionHeaderSticky(int section) {
+      return true;
+   }
+
    public HeaderViewHolder onCreateHeaderViewHolder(ViewGroup parent, int headerType) {
       return null;
    }

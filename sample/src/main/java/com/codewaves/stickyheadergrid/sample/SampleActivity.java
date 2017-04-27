@@ -2,13 +2,10 @@ package com.codewaves.stickyheadergrid.sample;
 
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.support.v7.widget.DividerItemDecoration;
 import android.support.v7.widget.RecyclerView;
 
 import com.codewaves.sample.R;
 import com.codewaves.stickyheadergrid.StickyHeaderGridLayoutManager;
-
-import static android.support.v7.widget.DividerItemDecoration.VERTICAL;
 
 public class SampleActivity extends AppCompatActivity {
    @Override
@@ -22,11 +19,11 @@ public class SampleActivity extends AppCompatActivity {
       layoutManager.setSpanSizeLookup(new StickyHeaderGridLayoutManager.SpanSizeLookup() {
          @Override
          public int getSpanSize(int section, int position) {
-            return 1;//(3 - position % 3);
+            return (3 - position % 3);
          }
       });
       //recycler.addItemDecoration(new DividerItemDecoration(this, VERTICAL));
       recycler.setLayoutManager(layoutManager);
-      recycler.setAdapter(new SampleAdapter(10, 5));
+      recycler.setAdapter(new SampleAdapter(20, 7));
    }
 }
