@@ -31,6 +31,7 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
    private int mHeadersStartPosition;
 
    private View mTopView;
+   private View mFirstVisibleView;
    private View mBottomView;
 
    private View mFloatingHeaderView;
@@ -238,7 +239,21 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
             break;
          }
 
-         final int top = mBottomView == null ? getPaddingTop() + mFirstViewOffset : getDecoratedBottom(mBottomView);
+         // Get next row top (bottom of the prev header/row) or start position
+         int top;
+         if (mBottomView == null) {
+            top = getPaddingTop() + mFirstViewOffset;
+         }
+         else {
+            final int bottomViewType = getViewType(mBottomView);
+            if (bottomViewType == StickyHeaderGridAdapter.TYPE_HEADER) {
+               top = getDecoratedBottom(mBottomView);
+            }
+            else {
+               top = getDecoratedRowBottom(mBottomView);
+            }
+         }
+
          final int viewType = mAdapter.getItemViewInternalType(adapterPosition);
          if (viewType == StickyHeaderGridAdapter.TYPE_HEADER) {
             final View v = recycler.getViewForPosition(adapterPosition);
@@ -477,7 +492,6 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
       clearHiddenItems(recycler);
       clearHiddenHeaders(recycler);
 
-
       // Update top/bottom views
       if (getChildCount() > 0) {
          mTopView = getTopmostView();
@@ -489,6 +503,31 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
          mTopView = mBottomView = null;
       }
       updateTopPosition();
+   }
+
+   private int getDecoratedRowBottom(View lastView) {
+      int bottom = getDecoratedBottom(lastView);
+      int spanId = INVALID_SPAN_ID;
+      for (int i = mHeadersStartPosition - 1; i >= 0; --i) {
+         final View v = getChildAt(i);
+         final LayoutParams lp = (LayoutParams)v.getLayoutParams();
+         if (v == lastView) {
+            spanId = lp.mSpanId;
+         }
+         else if (spanId != INVALID_SPAN_ID)  {
+            if (spanId == lp.mSpanId) {
+               final int viewBottom = getDecoratedBottom(v);
+               if (bottom < viewBottom) {
+                  bottom = viewBottom;
+               }
+            }
+            else {
+               break;
+            }
+         }
+      }
+
+      return bottom;
    }
 
    @Override
@@ -517,11 +556,21 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
             offsetChildrenVertical(scrollChunk);
             scrolled -= scrollChunk;
 
-            final int top = getDecoratedBottom(mBottomView);
             int adapterPosition = getPosition(mBottomView) + 1;
             if (scrolled >= dy || adapterPosition >= state.getItemCount()) {
                break;
             }
+
+            // Get next row top (bottom of the prev header/row)
+            final int bottomViewType = getViewType(mBottomView);
+            int top;
+            if (bottomViewType == StickyHeaderGridAdapter.TYPE_HEADER) {
+               top = getDecoratedBottom(mBottomView);
+            }
+            else {
+               top = getDecoratedRowBottom(mBottomView);
+            }
+
 
             final int viewType = mAdapter.getItemViewInternalType(adapterPosition);
             if (viewType == StickyHeaderGridAdapter.TYPE_HEADER) {
@@ -714,7 +763,9 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
    }
 
    private void clearState() {
-      mTopView = mBottomView = null;
+      mTopView = null;
+      mFirstVisibleView = null;
+      mBottomView = null;
       mHeadersStartPosition = 0;
       mStickOffset = 0;
       mFloatingHeaderView = null;

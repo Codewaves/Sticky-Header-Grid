@@ -26,7 +26,7 @@ public class SampleAdapter extends StickyHeaderGridAdapter {
          List<String> labels = new ArrayList<>(count);
          for (int i = 0; i < count; ++i) {
             String label = String.valueOf(i);
-            for (int p = 0; p < i; ++p) {
+            for (int p = 0; p < s - i; ++p) {
                label += "*\n";
             }
             labels.add(label);
