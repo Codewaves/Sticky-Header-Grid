@@ -1,6 +1,7 @@
 package com.codewaves.stickyheadergrid;
 
 import android.content.Context;
+import android.graphics.PointF;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.support.v7.widget.LinearSmoothScroller;
@@ -21,7 +22,7 @@ import static android.support.v7.widget.RecyclerView.NO_POSITION;
  */
 
 @SuppressWarnings({"unused", "WeakerAccess"})
-public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
+public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager implements RecyclerView.SmoothScroller.ScrollVectorProvider {
    public static final String TAG = "StickyLayoutManager";
 
    private static final int DEFAULT_ROW_COUNT = 16;
@@ -194,23 +195,6 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
       requestLayout();
    }
 
-   /**
-    * <p>Scroll the RecyclerView to make the position visible.</p>
-    *
-    * <p>RecyclerView will scroll the minimum amount that is necessary to make the
-    * target position visible.
-    *
-    * <p>Note that scroll position change will not be reflected until the next layout call.</p>
-    *
-    * @param section Scroll to this section
-    * @param offset Scroll to this offset inside the section
-    */
-   public void scrollToPosition(int section, int offset) {
-      if (mAdapter != null) {
-         scrollToPosition(mAdapter.getSectionItemPosition(section, offset));
-      }
-   }
-
    private int getExtraLayoutSpace(RecyclerView.State state) {
       if (state.hasTargetScrollPosition()) {
          return getHeight();
@@ -225,6 +209,20 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
       final LinearSmoothScroller linearSmoothScroller = new LinearSmoothScroller(recyclerView.getContext());
       linearSmoothScroller.setTargetPosition(position);
       startSmoothScroll(linearSmoothScroller);
+   }
+
+   @Override
+   public PointF computeScrollVectorForPosition(int targetPosition) {
+      if (getChildCount() == 0) {
+         return null;
+      }
+
+      final LayoutRow firstRow = getFirstVisibleRow();
+      if (firstRow == null) {
+         return null;
+      }
+
+      return new PointF(0, targetPosition - firstRow.adapterPosition);
    }
 
    @Override
@@ -294,7 +292,7 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
          }
          top = bottom;
 
-         if (bottom >= recyclerBottom) {
+         if (bottom >= recyclerBottom + getExtraLayoutSpace(state)) {
             break;
          }
       }
@@ -303,7 +301,7 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
          scrollVerticallyBy(getBottomRow().bottom - recyclerBottom, recycler, state);
       }
       else {
-         clearViewsAndStickHeaders(recycler);
+         clearViewsAndStickHeaders(recycler, state, false);
       }
    }
 
@@ -459,7 +457,7 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
       return mFillResult;
    }
 
-   private void clearHiddenRows(RecyclerView.Recycler recycler) {
+   private void clearHiddenRows(RecyclerView.Recycler recycler, RecyclerView.State state, boolean top) {
       if (mLayoutRows.size() <= 0) {
          return;
       }
@@ -467,45 +465,42 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
       final int recyclerTop = getPaddingTop();
       final int recyclerBottom = getHeight() - getPaddingBottom();
 
-      // First pass, from top
-      LayoutRow row = getTopRow();
-      while (row.bottom < recyclerTop || row.top > recyclerBottom) {
-         if (row.header) {
-            removeAndRecycleViewAt(getChildCount() - (mFloatingHeaderView != null ? 2 : 1), recycler);
-         }
-         else {
-            for (int i = 0; i < row.length; ++i) {
-               removeAndRecycleViewAt(0, recycler);
-               mHeadersStartPosition--;
+      if (top) {
+         LayoutRow row = getTopRow();
+         while (row.bottom < recyclerTop - getExtraLayoutSpace(state) || row.top > recyclerBottom) {
+            if (row.header) {
+               removeAndRecycleViewAt(getChildCount() - (mFloatingHeaderView != null ? 2 : 1), recycler);
             }
-         }
-         mLayoutRows.remove(0);
-         row = getTopRow();
-      }
-
-      if (mLayoutRows.size() <= 0) {
-         return;
-      }
-
-      // Second, from bottom
-      row = getBottomRow();
-      while (row.bottom < recyclerTop || row.top > recyclerBottom) {
-         if (row.header) {
-            removeAndRecycleViewAt(mHeadersStartPosition, recycler);
-         }
-         else {
-            for (int i = 0; i < row.length; ++i) {
-               removeAndRecycleViewAt(mHeadersStartPosition - 1, recycler);
-               mHeadersStartPosition--;
+            else {
+               for (int i = 0; i < row.length; ++i) {
+                  removeAndRecycleViewAt(0, recycler);
+                  mHeadersStartPosition--;
+               }
             }
+            mLayoutRows.remove(0);
+            row = getTopRow();
          }
-         mLayoutRows.remove(mLayoutRows.size() - 1);
-         row = getBottomRow();
+      }
+      else {
+         LayoutRow row = getBottomRow();
+         while (row.bottom < recyclerTop || row.top > recyclerBottom + getExtraLayoutSpace(state)) {
+            if (row.header) {
+               removeAndRecycleViewAt(mHeadersStartPosition, recycler);
+            }
+            else {
+               for (int i = 0; i < row.length; ++i) {
+                  removeAndRecycleViewAt(mHeadersStartPosition - 1, recycler);
+                  mHeadersStartPosition--;
+               }
+            }
+            mLayoutRows.remove(mLayoutRows.size() - 1);
+            row = getBottomRow();
+         }
       }
    }
 
-   private void clearViewsAndStickHeaders(RecyclerView.Recycler recycler) {
-      clearHiddenRows(recycler);
+   private void clearViewsAndStickHeaders(RecyclerView.Recycler recycler, RecyclerView.State state, boolean top) {
+      clearHiddenRows(recycler, state, top);
       if (getChildCount() > 0) {
          stickTopHeader(recycler);
       }
@@ -599,7 +594,7 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
             offsetRowsVertical(scrollChunk);
             scrolled -= scrollChunk;
 
-            int adapterPosition = bottomRow.adapterPosition + bottomRow.length;
+            final int adapterPosition = bottomRow.adapterPosition + bottomRow.length;
             if (scrolled >= dy || adapterPosition >= state.getItemCount()) {
                break;
             }
@@ -616,7 +611,7 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
             offsetRowsVertical(scrollChunk);
             scrolled -= scrollChunk;
 
-            int adapterPosition = topRow.adapterPosition - 1;
+            final int adapterPosition = topRow.adapterPosition - 1;
             if (scrolled <= dy || adapterPosition >= state.getItemCount() || adapterPosition < 0) {
                break;
             }
@@ -630,7 +625,33 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
          }
       }
 
-      clearViewsAndStickHeaders(recycler);
+      // Fill extra offscreen rows for smooth scroll
+      if (scrolled == dy) {
+         if (dy >= 0) {
+            // Bottom
+            while (true) {
+               final LayoutRow bottomRow = getBottomRow();
+               final int adapterPosition = bottomRow.adapterPosition + bottomRow.length;
+               if (bottomRow.bottom >= recyclerBottom + getExtraLayoutSpace(state) || adapterPosition >= state.getItemCount()) {
+                  break;
+               }
+               addRow(recycler, state, false, adapterPosition, bottomRow.bottom);
+            }
+         }
+         else {
+            // Top
+            while (true) {
+               final LayoutRow topRow = getTopRow();
+               final int adapterPosition = topRow.adapterPosition - 1;
+               if (topRow.top < recyclerTop - getExtraLayoutSpace(state) || adapterPosition < 0) {
+                  break;
+               }
+               addRow(recycler, state, true, adapterPosition, topRow.top);
+            }
+         }
+      }
+
+      clearViewsAndStickHeaders(recycler, state, dy >= 0);
       return  scrolled;
    }
 

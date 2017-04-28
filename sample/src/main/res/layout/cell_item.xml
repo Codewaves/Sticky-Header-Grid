@@ -3,7 +3,9 @@
    android:orientation="vertical"
    android:layout_width="match_parent"
    android:layout_height="wrap_content"
-   android:padding="5dp">
+   android:padding="5dp"
+   android:addStatesFromChildren="true"
+   android:foreground="?attr/selectableItemBackground">
 
    <TextView android:id="@+id/label"
       android:layout_width="match_parent"
