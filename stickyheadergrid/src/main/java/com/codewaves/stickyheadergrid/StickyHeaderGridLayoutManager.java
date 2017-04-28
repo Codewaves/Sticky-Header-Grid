@@ -528,6 +528,50 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
       offsetChildrenVertical(offset);
    }
 
+   private void addRow(RecyclerView.Recycler recycler, RecyclerView.State state, boolean isTop, int adapterPosition, int top) {
+      final int left = getPaddingLeft();
+      final int right = getWidth() - getPaddingRight();
+
+      // Reattach floating header if needed
+      if (isTop) {
+         if (mFloatingHeaderView != null && adapterPosition == mFloatingHeaderPosition) {
+            removeFloatingHeader(recycler);
+         }
+      }
+
+      final int viewType = mAdapter.getItemViewInternalType(adapterPosition);
+      if (viewType == StickyHeaderGridAdapter.TYPE_HEADER) {
+         final View v = recycler.getViewForPosition(adapterPosition);
+         if (isTop) {
+            addView(v);
+         }
+         else {
+            addView(v, mHeadersStartPosition);
+         }
+         measureChildWithMargins(v, 0, 0);
+         final int height = getDecoratedMeasuredHeight(v);
+         if (isTop) {
+            layoutDecorated(v, left, top - height, right, top);
+            mLayoutRows.add(0, new LayoutRow(v, adapterPosition, 1, top - height, top));
+         }
+         else {
+            layoutDecorated(v, left, top, right, top + height);
+            mLayoutRows.add(new LayoutRow(v, adapterPosition, 1, top, top + height));
+         }
+
+      }
+      else {
+         if (isTop) {
+            final FillResult result = fillTopRow(recycler, state, adapterPosition, top);
+            mLayoutRows.add(0, new LayoutRow(result.adapterPosition, result.length, top - result.height, top));
+         }
+         else {
+            final FillResult result = fillBottomRow(recycler, state, adapterPosition, top);
+            mLayoutRows.add(new LayoutRow(result.adapterPosition, result.length, top, top + result.height));
+         }
+      }
+   }
+
    @Override
    public int scrollVerticallyBy(int dy, RecyclerView.Recycler recycler, RecyclerView.State state) {
       if (getChildCount() == 0) {
@@ -560,20 +604,7 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
                break;
             }
 
-            final int top = bottomRow.bottom;
-            final int viewType = mAdapter.getItemViewInternalType(adapterPosition);
-            if (viewType == StickyHeaderGridAdapter.TYPE_HEADER) {
-               final View v = recycler.getViewForPosition(adapterPosition);
-               addView(v, mHeadersStartPosition);
-               measureChildWithMargins(v, 0, 0);
-               final int height = getDecoratedMeasuredHeight(v);
-               layoutDecorated(v, left, top, right, top + height);
-               mLayoutRows.add(new LayoutRow(v, adapterPosition, 1, top, top + height));
-            }
-            else {
-               final FillResult result = fillBottomRow(recycler, state, adapterPosition, top);
-               mLayoutRows.add(new LayoutRow(result.adapterPosition, result.length, top, top + result.height));
-            }
+            addRow(recycler, state, false, adapterPosition, bottomRow.bottom);
          }
       }
       else {
@@ -585,7 +616,6 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
             offsetRowsVertical(scrollChunk);
             scrolled -= scrollChunk;
 
-            final int top = topRow.top;
             int adapterPosition = topRow.adapterPosition - 1;
             if (scrolled <= dy || adapterPosition >= state.getItemCount() || adapterPosition < 0) {
                break;
@@ -596,19 +626,7 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager {
                removeFloatingHeader(recycler);
             }
 
-            final int viewType = mAdapter.getItemViewInternalType(adapterPosition);
-            if (viewType == StickyHeaderGridAdapter.TYPE_HEADER) {
-               final View v = recycler.getViewForPosition(adapterPosition);
-               addView(v);
-               measureChildWithMargins(v, 0, 0);
-               final int height = getDecoratedMeasuredHeight(v);
-               layoutDecorated(v, left, top - height, right, top);
-               mLayoutRows.add(0, new LayoutRow(v, adapterPosition, 1, top - height, top));
-            }
-            else {
-               final FillResult result = fillTopRow(recycler, state, adapterPosition, top);
-               mLayoutRows.add(0, new LayoutRow(result.adapterPosition, result.length, top - result.height, top));
-            }
+            addRow(recycler, state, true, adapterPosition, topRow.top);
          }
       }
 
