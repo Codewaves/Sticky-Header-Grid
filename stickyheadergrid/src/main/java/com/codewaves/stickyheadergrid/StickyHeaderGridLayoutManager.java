@@ -275,7 +275,7 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
          final int viewType = mAdapter.getItemViewInternalType(adapterPosition);
          if (viewType == StickyHeaderGridAdapter.TYPE_HEADER) {
             final View v = recycler.getViewForPosition(adapterPosition);
-            addView(v, mHeadersStartPosition);
+            addView(v);
             measureChildWithMargins(v, 0, 0);
 
             final int height = getDecoratedMeasuredHeight(v);
@@ -469,7 +469,7 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
          LayoutRow row = getTopRow();
          while (row.bottom < recyclerTop - getExtraLayoutSpace(state) || row.top > recyclerBottom) {
             if (row.header) {
-               removeAndRecycleViewAt(getChildCount() - (mFloatingHeaderView != null ? 2 : 1), recycler);
+               removeAndRecycleViewAt(mHeadersStartPosition + (mFloatingHeaderView != null ? 1 : 0), recycler);
             }
             else {
                for (int i = 0; i < row.length; ++i) {
@@ -485,7 +485,7 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
          LayoutRow row = getBottomRow();
          while (row.bottom < recyclerTop || row.top > recyclerBottom + getExtraLayoutSpace(state)) {
             if (row.header) {
-               removeAndRecycleViewAt(mHeadersStartPosition, recycler);
+               removeAndRecycleViewAt(getChildCount() - 1, recycler);
             }
             else {
                for (int i = 0; i < row.length; ++i) {
@@ -538,10 +538,10 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
       if (viewType == StickyHeaderGridAdapter.TYPE_HEADER) {
          final View v = recycler.getViewForPosition(adapterPosition);
          if (isTop) {
-            addView(v);
+            addView(v, mHeadersStartPosition);
          }
          else {
-            addView(v, mHeadersStartPosition);
+            addView(v);
          }
          measureChildWithMargins(v, 0, 0);
          final int height = getDecoratedMeasuredHeight(v);
@@ -655,43 +655,6 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
       return  scrolled;
    }
 
-   private View getTopmostView() {
-      View top = null;
-      if (getChildCount() > 0 && mHeadersStartPosition > 0) {
-         top = getChildAt(0);
-      }
-
-      for (int i = getChildCount() - 1; i >= mHeadersStartPosition ; --i) {
-         final View topHeader = getChildAt(i);
-         if (topHeader == mFloatingHeaderView) {
-            continue;
-         }
-
-         if (top == null || getDecoratedTop(topHeader) < getDecoratedTop(top)) {
-            top = topHeader;
-            break;
-         }
-      }
-
-      return top;
-   }
-
-   private View getBottommostView() {
-      View bottom = null;
-      if (getChildCount() > 0 && mHeadersStartPosition > 0) {
-         bottom = getChildAt(mHeadersStartPosition - 1);
-      }
-
-      if (mHeadersStartPosition < getChildCount()) {
-         final View bottomHeader = getChildAt(mHeadersStartPosition);
-         if (bottom == null || getDecoratedBottom(bottomHeader) > getDecoratedBottom(bottom)) {
-            bottom = bottomHeader;
-         }
-      }
-
-      return bottom;
-   }
-
    private LayoutRow getFirstVisibleRow() {
       final int recyclerTop = getPaddingTop();
       for (LayoutRow row : mLayoutRows) {
@@ -778,7 +741,7 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
 
                   // Create floating header
                   final View v = recycler.getViewForPosition(headerPosition);
-                  addView(v);
+                  addView(v, mHeadersStartPosition);
                   measureChildWithMargins(v, 0, 0);
                   mFloatingHeaderView = v;
                   mFloatingHeaderPosition = headerPosition;
@@ -788,7 +751,7 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
                final int height = getDecoratedMeasuredHeight(mFloatingHeaderView);
                int offset = 0;
                if (getChildCount() - mHeadersStartPosition > 1) {
-                  final View nextHeader = getChildAt(getChildCount() - 2);
+                  final View nextHeader = getChildAt(mHeadersStartPosition + 1);
                   offset = Math.max(top - getDecoratedTop(nextHeader), -height) + height;
                }
 
