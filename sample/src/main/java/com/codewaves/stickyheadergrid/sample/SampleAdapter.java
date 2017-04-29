@@ -25,10 +25,10 @@ public class SampleAdapter extends StickyHeaderGridAdapter {
       for (int s = 0; s < sections; ++s) {
          List<String> labels = new ArrayList<>(count);
          for (int i = 0; i < count; ++i) {
-            String label = String.valueOf(i);
-            for (int p = 0; p < s - i; ++p) {
+            String label = "Item " + String.valueOf(i);
+            /*for (int p = 0; p < s - i; ++p) {
                label += "*\n";
-            }
+            }*/
             labels.add(label);
          }
          this.labels.add(labels);
