@@ -37,6 +37,7 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
    private View mFloatingHeaderView;
    private int mFloatingHeaderPosition;
    private int mStickOffset;
+   private int mAverageHeaderHeight;
 
    private View mFillViewSet[];
 
@@ -205,8 +206,24 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
    }
 
    @Override
-   public void smoothScrollToPosition(RecyclerView recyclerView, RecyclerView.State state, int position) {
-      final LinearSmoothScroller linearSmoothScroller = new LinearSmoothScroller(recyclerView.getContext());
+   public void smoothScrollToPosition(final RecyclerView recyclerView, RecyclerView.State state, int position) {
+      final LinearSmoothScroller linearSmoothScroller = new LinearSmoothScroller(recyclerView.getContext()) {
+         @Override
+         public int calculateDyToMakeVisible(View view, int snapPreference) {
+            final RecyclerView.LayoutManager layoutManager = getLayoutManager();
+            if (layoutManager == null || !layoutManager.canScrollVertically()) {
+               return 0;
+            }
+
+            final int adapterPosition = getPosition(view);
+            final int topOffset = getPositionSectionHeaderHeight(adapterPosition);
+            final int top = layoutManager.getDecoratedTop(view);
+            final int bottom = layoutManager.getDecoratedBottom(view);
+            final int start = layoutManager.getPaddingTop() + topOffset;
+            final int end = layoutManager.getHeight() - layoutManager.getPaddingBottom();
+            return calculateDtToFit(top, bottom, start, end, snapPreference);
+         }
+      };
       linearSmoothScroller.setTargetPosition(position);
       startSmoothScroll(linearSmoothScroller);
    }
@@ -236,7 +253,6 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
       if (mPendingScrollPosition >= 0) {
          mFirstViewPosition = mPendingScrollPosition;
          mFirstViewOffset = mPendingScrollPositionOffset;
-         mPendingScrollPosition = NO_POSITION;
       }
       else if (mPendingSavedState != null && mPendingSavedState.hasValidAnchor()) {
          mFirstViewPosition = mPendingSavedState.mAnchorPosition;
@@ -247,6 +263,7 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
       if (mFirstViewPosition < 0 || mFirstViewPosition > state.getItemCount()) {
          mFirstViewPosition = 0;
          mFirstViewOffset = getPaddingTop();
+         mPendingScrollPosition = NO_POSITION;
       }
 
       if (mFirstViewOffset > 0) {
@@ -283,6 +300,7 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
             layoutDecorated(v, left, top, right, bottom);
             mLayoutRows.add(new LayoutRow(v, adapterPosition, 1, top, bottom));
             adapterPosition++;
+            mAverageHeaderHeight = height;
          }
          else {
             final FillResult result = fillBottomRow(recycler, state, adapterPosition, top);
@@ -303,6 +321,16 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
       else {
          clearViewsAndStickHeaders(recycler, state, false);
       }
+
+      // If layout was caused by the pending scroll, adjust top item position and move it under sticky header
+      if (mPendingScrollPosition >= 0) {
+         mPendingScrollPosition = NO_POSITION;
+
+         final int topOffset = getPositionSectionHeaderHeight(mFirstViewPosition);
+         if (topOffset != 0) {
+            scrollVerticallyBy(-topOffset, recycler, state);
+         }
+      }
    }
 
    @Override
@@ -311,9 +339,34 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
       mPendingSavedState = null;
    }
 
+   private int getPositionSectionHeaderHeight(int adapterPosition) {
+      final int section = mAdapter.getPositionSection(adapterPosition);
+      if (section >= 0 && mAdapter.isSectionHeaderSticky(section)) {
+         final int offset = mAdapter.getItemSectionOffset(section, adapterPosition);
+         if (offset >= 0) {
+            final int headerAdapterPosition = mAdapter.getSectionHeaderPosition(section);
+            if (mFloatingHeaderView != null && headerAdapterPosition == mFloatingHeaderPosition) {
+               return getDecoratedMeasuredHeight(mFloatingHeaderView);
+            }
+            else {
+               final LayoutRow header = getHeaderRow(headerAdapterPosition);
+               if (header != null) {
+                  return getDecoratedMeasuredHeight(header.headerView);
+               }
+               else {
+                  // Fall back to cached header size, can be incorrect
+                  return mAverageHeaderHeight;
+               }
+            }
+         }
+      }
+
+      return 0;
+   }
+
    private int findFirstRowItem(int adapterPosition) {
       final int section = mAdapter.getPositionSection(adapterPosition);
-      int sectionPosition = mAdapter.getItemSectionPosition(section, adapterPosition);
+      int sectionPosition = mAdapter.getItemSectionOffset(section, adapterPosition);
       while (sectionPosition > 0 && mSpanSizeLookup.getSpanIndex(section, sectionPosition, mSpanCount) != 0) {
          sectionPosition--;
          adapterPosition--;
@@ -342,7 +395,7 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
       final int recyclerWidth = getWidth() - getPaddingLeft() - getPaddingRight();
       final int section = mAdapter.getPositionSection(position);
       int adapterPosition = position;
-      int sectionPosition = mAdapter.getItemSectionPosition(section, adapterPosition);
+      int sectionPosition = mAdapter.getItemSectionOffset(section, adapterPosition);
       int spanSize = mSpanSizeLookup.getSpanSize(section, sectionPosition);
       int spanIndex = mSpanSizeLookup.getSpanIndex(section, sectionPosition, mSpanCount);
       int count = 0;
@@ -402,7 +455,7 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
       final int recyclerWidth = getWidth() - getPaddingLeft() - getPaddingRight();
       final int section = mAdapter.getPositionSection(position);
       int adapterPosition = position;
-      int sectionPosition = mAdapter.getItemSectionPosition(section, adapterPosition);
+      int sectionPosition = mAdapter.getItemSectionOffset(section, adapterPosition);
       int spanSize = mSpanSizeLookup.getSpanSize(section, sectionPosition);
       int spanIndex = mSpanSizeLookup.getSpanIndex(section, sectionPosition, mSpanCount);
       int count = 0;
@@ -553,7 +606,7 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
             layoutDecorated(v, left, top, right, top + height);
             mLayoutRows.add(new LayoutRow(v, adapterPosition, 1, top, top + height));
          }
-
+         mAverageHeaderHeight = height;
       }
       else {
          if (isTop) {
@@ -614,11 +667,6 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
             final int adapterPosition = topRow.adapterPosition - 1;
             if (scrolled <= dy || adapterPosition >= state.getItemCount() || adapterPosition < 0) {
                break;
-            }
-
-            // Reattach floating header if needed
-            if (mFloatingHeaderView != null && adapterPosition == mFloatingHeaderPosition) {
-               removeFloatingHeader(recycler);
             }
 
             addRow(recycler, state, true, adapterPosition, topRow.top);
@@ -685,6 +733,16 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
       for (int i = headerFrom + 1, n = mLayoutRows.size(); i < n; ++i) {
          final LayoutRow row = mLayoutRows.get(i);
          if (row.header) {
+            return row;
+         }
+      }
+      return null;
+   }
+
+   private LayoutRow getHeaderRow(int adapterPosition) {
+      for (int i = 0, n = mLayoutRows.size(); i < n; ++i) {
+         final LayoutRow row = mLayoutRows.get(i);
+         if (row.header && row.adapterPosition == adapterPosition) {
             return row;
          }
       }
@@ -786,6 +844,8 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
       mHeadersStartPosition = 0;
       mStickOffset = 0;
       mFloatingHeaderView = null;
+      mFloatingHeaderPosition = -1;
+      mAverageHeaderHeight = 0;
       mLayoutRows.clear();
    }
 

@@ -46,7 +46,7 @@ public class SampleActivity extends AppCompatActivity {
       int id = item.getItemId();
       switch (id) {
          case R.id.action_top:
-            mRecycler.scrollToPosition(0);
+            mRecycler.scrollToPosition(2);
             break;
          case R.id.action_center:
             mRecycler.scrollToPosition(SECTIONS * SECTION_ITEMS / 2);
@@ -55,7 +55,7 @@ public class SampleActivity extends AppCompatActivity {
             mRecycler.scrollToPosition(SECTIONS * (SECTION_ITEMS + 1) - 1);
             break;
          case R.id.action_top_smooth:
-            mRecycler.smoothScrollToPosition(0);
+            mRecycler.smoothScrollToPosition(3);
             break;
          case R.id.action_center_smooth:
             mRecycler.smoothScrollToPosition(SECTIONS * SECTION_ITEMS / 2);

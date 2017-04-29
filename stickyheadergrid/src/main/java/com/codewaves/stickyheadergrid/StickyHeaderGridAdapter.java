@@ -144,8 +144,8 @@ public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGr
             onBindHeaderViewHolder((HeaderViewHolder)holder, section, externalType);
             break;
          case TYPE_ITEM:
-            final int sectionPosition = getItemSectionPosition(section, position);
-            onBindItemViewHolder((ItemViewHolder)holder, section, sectionPosition, externalType);
+            final int offset = getItemSectionOffset(section, position);
+            onBindItemViewHolder((ItemViewHolder)holder, section, offset, externalType);
             break;
          default:
             throw new InvalidParameterException("invalid viewType: " + internalType);
@@ -173,7 +173,7 @@ public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGr
    }
 
    // Helpers
-   public int getItemSectionPosition(int section, int position) {
+   int getItemSectionOffset(int section, int position) {
       if (mSections == null) {
          calculateSections();
       }
@@ -195,7 +195,7 @@ public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGr
       return localPosition - 1;
    }
 
-   public int getPositionSection(int position) {
+   int getPositionSection(int position) {
       if (mSections == null) {
          calculateSections();
       }
@@ -215,7 +215,11 @@ public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGr
       return mSectionIndices[position];
    }
 
-   private int getAdapterPosition(int section, int offset) {
+   int getItemSectionHeaderPosition(int position) {
+      return getSectionHeaderPosition(getPositionSection(position));
+   }
+
+   int getAdapterPosition(int section, int offset) {
       if (mSections == null) {
          calculateSections();
       }
@@ -232,11 +236,11 @@ public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGr
       return sectionObject.position + offset;
    }
 
-   public int getSectionHeaderPosition(int section) {
+   int getSectionHeaderPosition(int section) {
       return getAdapterPosition(section, 0);
    }
 
-   public int getSectionItemPosition(int section, int offset) {
+   int getSectionItemPosition(int section, int offset) {
       return getAdapterPosition(section, offset + 1);
    }
 
