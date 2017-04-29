@@ -25,6 +25,8 @@ public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGr
 
    @SuppressWarnings("WeakerAccess")
    public static class ViewHolder extends RecyclerView.ViewHolder {
+      int mSection;
+
       public ViewHolder(View itemView) {
          super(itemView);
       }
@@ -32,11 +34,25 @@ public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGr
       public boolean isHeader() {
          return false;
       }
+
+      public int getSection() {
+         return mSection;
+      }
+
+      public int getSectionItemViewType() {
+         return StickyHeaderGridAdapter.externalViewType(getItemViewType());
+      }
    }
 
    public static class ItemViewHolder extends ViewHolder {
+      int mPosition;
+
       public ItemViewHolder(View itemView) {
          super(itemView);
+      }
+
+      public int getSectionPosition() {
+         return mPosition;
       }
    }
 
@@ -95,16 +111,16 @@ public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGr
       return position == 0 ? TYPE_HEADER : TYPE_ITEM;
    }
 
-   private int internalViewType(int type) {
+   static private int internalViewType(int type) {
       return type & 0xFF;
    }
 
-   private int externalViewType(int type) {
+   static private int externalViewType(int type) {
       return type >> 8;
    }
 
    @Override
-   public int getItemCount() {
+   final public int getItemCount() {
       if (mSections == null) {
          calculateSections();
       }
@@ -112,9 +128,7 @@ public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGr
    }
 
    @Override
-   public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-      //Log.d(TAG, "onCreateViewHolder type: " + viewType);
-
+   final public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
       final int internalType = internalViewType(viewType);
       final int externalType = externalViewType(viewType);
 
@@ -128,9 +142,7 @@ public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGr
    }
 
    @Override
-   public void onBindViewHolder(ViewHolder holder, int position) {
-      //Log.d(TAG, "onBindViewHolder position: " + position);
-
+   final public void onBindViewHolder(ViewHolder holder, int position) {
       if (mSections == null) {
          calculateSections();
       }
@@ -139,13 +151,17 @@ public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGr
       final int internalType = internalViewType(holder.getItemViewType());
       final int externalType = externalViewType(holder.getItemViewType());
 
+      holder.mSection = section;
+
       switch (internalType) {
          case TYPE_HEADER:
-            onBindHeaderViewHolder((HeaderViewHolder)holder, section, externalType);
+            onBindHeaderViewHolder((HeaderViewHolder)holder, section);
             break;
          case TYPE_ITEM:
+            final ItemViewHolder itemHolder = (ItemViewHolder)holder;
             final int offset = getItemSectionOffset(section, position);
-            onBindItemViewHolder((ItemViewHolder)holder, section, offset, externalType);
+            itemHolder.mPosition = offset;
+            onBindItemViewHolder((ItemViewHolder)holder, section, offset);
             break;
          default:
             throw new InvalidParameterException("invalid viewType: " + internalType);
@@ -153,7 +169,7 @@ public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGr
    }
 
    @Override
-   public int getItemViewType(int position) {
+   final public int getItemViewType(int position) {
       final int section = getPositionSection(position);
       final Section sectionObject = mSections.get(section);
       final int sectionPosition = position - sectionObject.position;
@@ -162,10 +178,10 @@ public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGr
 
       switch (internalType) {
          case TYPE_HEADER:
-            externalType = getSectionHeaderType(section);
+            externalType = getSectionHeaderViewType(section);
             break;
          case TYPE_ITEM:
-            externalType = getSectionItemType(section, sectionPosition - 1);
+            externalType = getSectionItemViewType(section, sectionPosition - 1);
             break;
       }
 
@@ -236,50 +252,222 @@ public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGr
       return sectionObject.position + offset;
    }
 
-   int getSectionHeaderPosition(int section) {
+   /**
+    * Returns the internal adapter position for given <code>section</code> header. Use
+    * this only for {@link RecyclerView#scrollToPosition(int)} or similar functions.
+    * Never directly manipulate adapter items using this position.
+    *
+    * @param section section to query
+    * @return The internal adapter position.
+    */
+   public int getSectionHeaderPosition(int section) {
       return getAdapterPosition(section, 0);
    }
 
-   int getSectionItemPosition(int section, int offset) {
-      return getAdapterPosition(section, offset + 1);
+   /**
+    * Returns the internal adapter position for given <code>section</code> and
+    * <code>offset</code>. Use this only for {@link RecyclerView#scrollToPosition(int)}
+    * or similar functions. Never directly manipulate adapter items using this position.
+    *
+    * @param section section to query
+    * @param position item position inside the <code>section</code>
+    * @return The internal adapter position.
+    */
+   public int getSectionItemPosition(int section, int position) {
+      return getAdapterPosition(section, position + 1);
    }
 
    // Overrides
+   /**
+    * Returns the total number of sections in the data set held by the adapter.
+    *
+    * @return The total number of section in this adapter.
+    */
    public int getSectionCount() {
       return 0;
    }
 
+   /**
+    * Returns the number of items in the <code>section</code>.
+    *
+    * @param section section to query
+    * @return The total number of items in the <code>section</code>.
+    */
    public int getSectionItemCount(int section) {
       return 0;
    }
 
-   public int getSectionHeaderType(int section) {
+   /**
+    * Return the view type of the <code>section</code> header for the purposes
+    * of view recycling.
+    *
+    * <p>The default implementation of this method returns 0, making the assumption of
+    * a single view type for the headers. Unlike ListView adapters, types need not
+    * be contiguous. Consider using id resources to uniquely identify item view types.
+    *
+    * @param section section to query
+    * @return integer value identifying the type of the view needed to represent the header in
+    *                 <code>section</code>. Type codes need not be contiguous.
+    */
+   public int getSectionHeaderViewType(int section) {
       return 0;
    }
 
-   public int getSectionItemType(int section, int position) {
+   /**
+    * Return the view type of the item at <code>position</code> in <code>section</code> for
+    * the purposes of view recycling.
+    *
+    * <p>The default implementation of this method returns 0, making the assumption of
+    * a single view type for the adapter. Unlike ListView adapters, types need not
+    * be contiguous. Consider using id resources to uniquely identify item view types.
+    *
+    * @param section section to query
+    * @param position section position to query
+    * @return integer value identifying the type of the view needed to represent the item at
+    *                 <code>position</code> in <code>section</code>. Type codes need not be
+    *                 contiguous.
+    */
+   public int getSectionItemViewType(int section, int position) {
       return 0;
    }
 
+   /**
+    * Returns true if header in <code>section</code> is sticky.
+    *
+    * @param section section to query
+    * @return true if <code>section</code> header is sticky.
+    */
    public boolean isSectionHeaderSticky(int section) {
       return true;
    }
 
+   /**
+    * Called when RecyclerView needs a new {@link HeaderViewHolder} of the given type to represent
+    * a header.
+    * <p>
+    * This new HeaderViewHolder should be constructed with a new View that can represent the headers
+    * of the given type. You can either create a new View manually or inflate it from an XML
+    * layout file.
+    * <p>
+    * The new HeaderViewHolder will be used to display items of the adapter using
+    * {@link #onBindHeaderViewHolder(HeaderViewHolder, int)}. Since it will be re-used to display
+    * different items in the data set, it is a good idea to cache references to sub views of
+    * the View to avoid unnecessary {@link View#findViewById(int)} calls.
+    *
+    * @param parent The ViewGroup into which the new View will be added after it is bound to
+    *               an adapter position.
+    * @param headerType The view type of the new View.
+    *
+    * @return A new ViewHolder that holds a View of the given view type.
+    * @see #getSectionHeaderViewType(int)
+    * @see #onBindHeaderViewHolder(HeaderViewHolder, int)
+    */
    public HeaderViewHolder onCreateHeaderViewHolder(ViewGroup parent, int headerType) {
       return null;
    }
 
+   /**
+    * Called when RecyclerView needs a new {@link ItemViewHolder} of the given type to represent
+    * an item.
+    * <p>
+    * This new ViewHolder should be constructed with a new View that can represent the items
+    * of the given type. You can either create a new View manually or inflate it from an XML
+    * layout file.
+    * <p>
+    * The new ViewHolder will be used to display items of the adapter using
+    * {@link #onBindItemViewHolder(ItemViewHolder, int, int)}. Since it will be re-used to display
+    * different items in the data set, it is a good idea to cache references to sub views of
+    * the View to avoid unnecessary {@link View#findViewById(int)} calls.
+    *
+    * @param parent The ViewGroup into which the new View will be added after it is bound to
+    *               an adapter position.
+    * @param itemType The view type of the new View.
+    *
+    * @return A new ViewHolder that holds a View of the given view type.
+    * @see #getSectionItemViewType(int, int)
+    * @see #onBindItemViewHolder(ItemViewHolder, int, int)
+    */
    public ItemViewHolder onCreateItemViewHolder(ViewGroup parent, int itemType) {
       return null;
    }
 
-   public void onBindHeaderViewHolder(HeaderViewHolder viewHolder, int section, int headerType) {
+   /**
+    * Called by RecyclerView to display the data at the specified position. This method should
+    * update the contents of the {@link HeaderViewHolder#itemView} to reflect the header at the given
+    * position.
+    * <p>
+    * Note that unlike {@link android.widget.ListView}, RecyclerView will not call this method
+    * again if the position of the header changes in the data set unless the header itself is
+    * invalidated or the new position cannot be determined. For this reason, you should only
+    * use the <code>section</code> parameters while acquiring the
+    * related header data inside this method and should not keep a copy of it. If you need the
+    * position of a header later on (e.g. in a click listener), use
+    * {@link HeaderViewHolder#getSection()} which will have the updated adapter position.
+    *
+    *
+    * @param viewHolder The ViewHolder which should be updated to represent the contents of the
+    *        header at the given position in the data set.
+    * @param section The index of the section.
+    */
+   public void onBindHeaderViewHolder(HeaderViewHolder viewHolder, int section) {
    }
 
-   public void onBindItemViewHolder(ItemViewHolder viewHolder, int section, int position, int itemType) {
+   /**
+    * Called by RecyclerView to display the data at the specified position. This method should
+    * update the contents of the {@link ItemViewHolder#itemView} to reflect the item at the given
+    * position.
+    * <p>
+    * Note that unlike {@link android.widget.ListView}, RecyclerView will not call this method
+    * again if the position of the item changes in the data set unless the item itself is
+    * invalidated or the new position cannot be determined. For this reason, you should only
+    * use the <code>position</code> and <code>section</code> parameters while acquiring the
+    * related data item inside this method and should not keep a copy of it. If you need the
+    * position of an item later on (e.g. in a click listener), use
+    * {@link ItemViewHolder#getSectionPosition()} which will have the updated adapter
+    * position.
+    *
+    *
+    * @param viewHolder The ViewHolder which should be updated to represent the contents of the
+    *        item at the given position in the data set.
+    * @param section The index of the section.
+    * @param position The position of the item within the section.
+    */
+   public void onBindItemViewHolder(ItemViewHolder viewHolder, int section, int position) {
    }
 
    // Notify
+   /**
+    * Notify any registered observers that the data set has changed.
+    *
+    * <p>There are two different classes of data change events, item changes and structural
+    * changes. Item changes are when a single item has its data updated but no positional
+    * changes have occurred. Structural changes are when items are inserted, removed or moved
+    * within the data set.</p>
+    *
+    * <p>This event does not specify what about the data set has changed, forcing
+    * any observers to assume that all existing items and structure may no longer be valid.
+    * LayoutManagers will be forced to fully rebind and relayout all visible views.</p>
+    *
+    * <p><code>RecyclerView</code> will attempt to synthesize visible structural change events
+    * for adapters that report that they have {@link #hasStableIds() stable IDs} when
+    * this method is used. This can help for the purposes of animation and visual
+    * object persistence but individual item views will still need to be rebound
+    * and relaid out.</p>
+    *
+    * <p>If you are writing an adapter it will always be more efficient to use the more
+    * specific change events if you can. Rely on <code>notifyDataSetChanged()</code>
+    * as a last resort.</p>
+    *
+    * @see #notifySectionDataSetChanged(int)
+    * @see #notifySectionHeaderChanged(int)
+    * @see #notifySectionItemChanged(int, int)
+    * @see #notifySectionInserted(int)
+    * @see #notifySectionItemInserted(int, int)
+    * @see #notifySectionItemRangeInserted(int, int, int)
+    * @see #notifySectionRemoved(int)
+    * @see #notifySectionItemRemoved(int, int)
+    * @see #notifySectionItemRangeRemoved(int, int, int)
+    */
    public void notifyAllSectionsDataSetChanged() {
       calculateSections();
       notifyDataSetChanged();
@@ -293,6 +481,60 @@ public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGr
       else {
          final Section sectionObject = mSections.get(section);
          notifyItemRangeChanged(sectionObject.position, sectionObject.length);
+      }
+   }
+
+   public void notifySectionHeaderChanged(int section) {
+      calculateSections();
+      if (mSections == null) {
+         notifyAllSectionsDataSetChanged();
+      }
+      else {
+         final Section sectionObject = mSections.get(section);
+         notifyItemRangeChanged(sectionObject.position, 1);
+      }
+   }
+
+   public void notifySectionItemChanged(int section, int position) {
+      calculateSections();
+      if (mSections == null) {
+         notifyAllSectionsDataSetChanged();
+      }
+      else {
+         final Section sectionObject = mSections.get(section);
+
+         if (position >= sectionObject.itemNumber) {
+            throw new IndexOutOfBoundsException("Invalid index " + position + ", size is " + sectionObject.itemNumber);
+         }
+
+         notifyItemChanged(sectionObject.position + position + 1);
+      }
+   }
+
+   public void notifySectionInserted(int section) {
+      calculateSections();
+      if (mSections == null) {
+         notifyAllSectionsDataSetChanged();
+      }
+      else {
+         final Section sectionObject = mSections.get(section);
+         notifyItemRangeInserted(sectionObject.position, sectionObject.length);
+      }
+   }
+
+   public void notifySectionItemInserted(int section, int position) {
+      calculateSections();
+      if (mSections == null) {
+         notifyAllSectionsDataSetChanged();
+      }
+      else {
+         final Section sectionObject = mSections.get(section);
+
+         if (position < 0 || position >= sectionObject.itemNumber) {
+            throw new IndexOutOfBoundsException("Invalid index " + position + ", size is " + sectionObject.itemNumber);
+         }
+
+         notifyItemInserted(sectionObject.position + position + 1);
       }
    }
 
@@ -315,55 +557,15 @@ public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGr
       }
    }
 
-   private void notifySectionItemRangeRemoved(int section, int position, int count) {
+   public void notifySectionRemoved(int section) {
       if (mSections == null) {
          calculateSections();
          notifyAllSectionsDataSetChanged();
       }
       else {
          final Section sectionObject = mSections.get(section);
-
-         if (position < 0 || position >= sectionObject.itemNumber) {
-            throw new IndexOutOfBoundsException("Invalid index " + position + ", size is " + sectionObject.itemNumber);
-         }
-         if (position + count > sectionObject.itemNumber) {
-            throw new IndexOutOfBoundsException("Invalid index " + (position + count) + ", size is " + sectionObject.itemNumber);
-         }
-
          calculateSections();
-         notifyItemRangeRemoved(sectionObject.position + position + 1, count);
-      }
-   }
-
-   public void notifySectionItemChanged(int section, int position) {
-      calculateSections();
-      if (mSections == null) {
-         notifyAllSectionsDataSetChanged();
-      }
-      else {
-         final Section sectionObject = mSections.get(section);
-
-         if (position >= sectionObject.itemNumber) {
-            throw new IndexOutOfBoundsException("Invalid index " + position + ", size is " + sectionObject.itemNumber);
-         }
-
-         notifyItemChanged(sectionObject.position + position + 1);
-      }
-   }
-
-   public void notifySectionItemInserted(int section, int position) {
-      calculateSections();
-      if (mSections == null) {
-         notifyAllSectionsDataSetChanged();
-      }
-      else {
-         final Section sectionObject = mSections.get(section);
-
-         if (position < 0 || position >= sectionObject.itemNumber) {
-            throw new IndexOutOfBoundsException("Invalid index " + position + ", size is " + sectionObject.itemNumber);
-         }
-
-         notifyItemInserted(sectionObject.position + position + 1);
+         notifyItemRangeRemoved(sectionObject.position, sectionObject.length);
       }
    }
 
@@ -384,26 +586,23 @@ public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGr
       }
    }
 
-   public void notifySectionInserted(int section) {
-      calculateSections();
+   private void notifySectionItemRangeRemoved(int section, int position, int count) {
       if (mSections == null) {
+         calculateSections();
          notifyAllSectionsDataSetChanged();
       }
       else {
          final Section sectionObject = mSections.get(section);
-         notifyItemRangeInserted(sectionObject.position, sectionObject.length);
-      }
-   }
 
-   public void notifySectionRemoved(int section) {
-      if (mSections == null) {
+         if (position < 0 || position >= sectionObject.itemNumber) {
+            throw new IndexOutOfBoundsException("Invalid index " + position + ", size is " + sectionObject.itemNumber);
+         }
+         if (position + count > sectionObject.itemNumber) {
+            throw new IndexOutOfBoundsException("Invalid index " + (position + count) + ", size is " + sectionObject.itemNumber);
+         }
+
          calculateSections();
-         notifyAllSectionsDataSetChanged();
-      }
-      else {
-         final Section sectionObject = mSections.get(section);
-         calculateSections();
-         notifyItemRangeRemoved(sectionObject.position, sectionObject.length);
+         notifyItemRangeRemoved(sectionObject.position + position + 1, count);
       }
    }
 }

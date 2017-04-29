@@ -58,22 +58,22 @@ public class SampleAdapter extends StickyHeaderGridAdapter {
    }
 
    @Override
-   public void onBindHeaderViewHolder(HeaderViewHolder viewHolder, int section, int headerType) {
+   public void onBindHeaderViewHolder(HeaderViewHolder viewHolder, int section) {
       final MyHeaderViewHolder holder = (MyHeaderViewHolder)viewHolder;
       final String label = "Header " + section;
       holder.labelView.setText(label);
    }
 
    @Override
-   public void onBindItemViewHolder(ItemViewHolder viewHolder, final int section, final int position, int itemType) {
+   public void onBindItemViewHolder(ItemViewHolder viewHolder, final int section, final int position) {
       final MyItemViewHolder holder = (MyItemViewHolder)viewHolder;
       final String label = labels.get(section).get(position);
       holder.labelView.setText(label);
       holder.labelView.setOnClickListener(new View.OnClickListener() {
          @Override
          public void onClick(View v) {
-            labels.get(section).remove(position);
-            notifySectionItemRemoved(section, position);
+            labels.get(holder.getSection()).remove(holder.getSectionPosition());
+            notifySectionItemRemoved(holder.getSection(), holder.getSectionPosition());
             Toast.makeText(holder.labelView.getContext(), label, Toast.LENGTH_SHORT).show();
          }
       });
