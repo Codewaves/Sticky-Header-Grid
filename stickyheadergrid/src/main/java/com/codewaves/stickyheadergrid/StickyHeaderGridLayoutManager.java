@@ -867,6 +867,53 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
       mLayoutRows.clear();
    }
 
+   @Override
+   public int computeVerticalScrollExtent(RecyclerView.State state) {
+      if (getChildCount() == 0 || state.getItemCount() == 0) {
+         return 0;
+      }
+
+      final View startChild = getChildAt(0);
+      final View endChild = getChildAt(getChildCount() - 1);
+      if (startChild == null || endChild == null) {
+         return 0;
+      }
+
+      return Math.abs(getPosition(startChild) - getPosition(endChild)) + 1;
+   }
+
+   @Override
+   public int computeVerticalScrollOffset(RecyclerView.State state) {
+      if (getChildCount() == 0 || state.getItemCount() == 0) {
+         return 0;
+      }
+
+      final View startChild = getChildAt(0);
+      final View endChild = getChildAt(getChildCount() - 1);
+      if (startChild == null || endChild == null) {
+         return 0;
+      }
+
+      final int minPosition = Math.min(getPosition(startChild), getPosition(endChild));
+      final int maxPosition = Math.max(getPosition(startChild), getPosition(endChild));
+      return Math.max(0, minPosition);
+   }
+
+   @Override
+   public int computeVerticalScrollRange(RecyclerView.State state) {
+      if (getChildCount() == 0 || state.getItemCount() == 0) {
+         return 0;
+      }
+
+      final View startChild = getChildAt(0);
+      final View endChild = getChildAt(getChildCount() - 1);
+      if (startChild == null || endChild == null) {
+         return 0;
+      }
+
+      return state.getItemCount();
+   }
+
    public static class LayoutParams extends RecyclerView.LayoutParams {
       public static final int INVALID_SPAN_ID = -1;
 
