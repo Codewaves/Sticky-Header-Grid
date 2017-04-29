@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+   <dimen name="item_padding">5dp</dimen>
+   <dimen name="label_padding">5dp</dimen>
+   <dimen name="header_shadow_size">5dp</dimen>
+</resources>

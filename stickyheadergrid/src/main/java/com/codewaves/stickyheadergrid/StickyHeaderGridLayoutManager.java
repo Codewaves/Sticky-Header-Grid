@@ -38,6 +38,7 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
    private int mFloatingHeaderPosition;
    private int mStickOffset;
    private int mAverageHeaderHeight;
+   private int mHeaderOverlapMargin;
 
    private View mFillViewSet[];
 
@@ -59,6 +60,7 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
    public StickyHeaderGridLayoutManager(int spanCount) {
       mSpanCount = spanCount;
       mFillViewSet = new View[spanCount];
+      mHeaderOverlapMargin = 0;
       if (spanCount < 1) {
          throw new IllegalArgumentException("Span count should be at least 1. Provided " + spanCount);
       }
@@ -84,6 +86,16 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
     */
    public SpanSizeLookup getSpanSizeLookup() {
       return mSpanSizeLookup;
+   }
+
+   /**
+    * Sets the size of header bottom margin that overlaps first section item. Used to create header bottom edge shadows.
+    *
+    * @param bottomMargin Size of header bottom margin in pixels
+    *
+    */
+   public void setHeaderBottomOverlapMargin(int bottomMargin) {
+      mHeaderOverlapMargin = bottomMargin;
    }
 
    @Override
@@ -295,9 +307,13 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
             addView(v);
             measureChildWithMargins(v, 0, 0);
 
-            final int height = getDecoratedMeasuredHeight(v);
+            int height = getDecoratedMeasuredHeight(v);
+            final int margin = height >= mHeaderOverlapMargin ? mHeaderOverlapMargin : height;
             bottom = top + height;
             layoutDecorated(v, left, top, right, bottom);
+
+            bottom -= margin;
+            height -= margin;
             mLayoutRows.add(new LayoutRow(v, adapterPosition, 1, top, bottom));
             adapterPosition++;
             mAverageHeaderHeight = height;
@@ -346,12 +362,12 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
          if (offset >= 0) {
             final int headerAdapterPosition = mAdapter.getSectionHeaderPosition(section);
             if (mFloatingHeaderView != null && headerAdapterPosition == mFloatingHeaderPosition) {
-               return getDecoratedMeasuredHeight(mFloatingHeaderView);
+               return Math.max(0, getDecoratedMeasuredHeight(mFloatingHeaderView) - mHeaderOverlapMargin);
             }
             else {
                final LayoutRow header = getHeaderRow(headerAdapterPosition);
                if (header != null) {
-                  return getDecoratedMeasuredHeight(header.headerView);
+                  return header.getHeight();
                }
                else {
                   // Fall back to cached header size, can be incorrect
@@ -598,15 +614,16 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
          }
          measureChildWithMargins(v, 0, 0);
          final int height = getDecoratedMeasuredHeight(v);
+         final int margin = height >= mHeaderOverlapMargin ? mHeaderOverlapMargin : height;
          if (isTop) {
-            layoutDecorated(v, left, top - height, right, top);
-            mLayoutRows.add(0, new LayoutRow(v, adapterPosition, 1, top - height, top));
+            layoutDecorated(v, left, top - height + margin, right, top + margin);
+            mLayoutRows.add(0, new LayoutRow(v, adapterPosition, 1, top - height + margin, top));
          }
          else {
             layoutDecorated(v, left, top, right, top + height);
-            mLayoutRows.add(new LayoutRow(v, adapterPosition, 1, top, top + height));
+            mLayoutRows.add(new LayoutRow(v, adapterPosition, 1, top, top + height - margin));
          }
-         mAverageHeaderHeight = height;
+         mAverageHeaderHeight = height - margin;
       }
       else {
          if (isTop) {
@@ -810,7 +827,8 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
                int offset = 0;
                if (getChildCount() - mHeadersStartPosition > 1) {
                   final View nextHeader = getChildAt(mHeadersStartPosition + 1);
-                  offset = Math.max(top - getDecoratedTop(nextHeader), -height) + height;
+                  final int contentHeight = Math.max(0, height - mHeaderOverlapMargin);
+                  offset = Math.max(top - getDecoratedTop(nextHeader), -contentHeight) + contentHeight;
                }
 
                layoutDecorated(mFloatingHeaderView, left, top - offset, right, top + height - offset);

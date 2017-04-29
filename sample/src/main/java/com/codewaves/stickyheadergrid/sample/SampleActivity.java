@@ -1,5 +1,6 @@
 package com.codewaves.stickyheadergrid.sample;
 
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.RecyclerView;
@@ -24,6 +25,7 @@ public class SampleActivity extends AppCompatActivity {
       // Setup recycler
       mRecycler = (RecyclerView)findViewById(R.id.recycler);
       mLayoutManager = new StickyHeaderGridLayoutManager(3);
+      mLayoutManager.setHeaderBottomOverlapMargin(getResources().getDimensionPixelSize(R.dimen.header_shadow_size));
       mLayoutManager.setSpanSizeLookup(new StickyHeaderGridLayoutManager.SpanSizeLookup() {
          @Override
          public int getSpanSize(int section, int position) {

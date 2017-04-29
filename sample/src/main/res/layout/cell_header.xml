@@ -2,15 +2,17 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
    android:orientation="vertical"
    android:layout_width="match_parent"
-   android:layout_height="wrap_content"
-   android:padding="5dp"
-   android:background="@android:color/white">
+   android:layout_height="wrap_content">
 
    <TextView android:id="@+id/label"
       android:layout_width="match_parent"
       android:layout_height="wrap_content"
-      android:padding="5dp"
+      android:padding="@dimen/label_padding"
       android:background="@color/colorPrimary"
       android:textColor="@android:color/black"/>
+
+   <View android:layout_width="match_parent"
+      android:layout_height="@dimen/header_shadow_size"
+      android:background="@drawable/header_shadow"/>
 
 </LinearLayout>

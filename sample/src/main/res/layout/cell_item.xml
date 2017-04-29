@@ -3,14 +3,14 @@
    android:orientation="vertical"
    android:layout_width="match_parent"
    android:layout_height="wrap_content"
-   android:padding="5dp"
+   android:padding="@dimen/item_padding"
    android:addStatesFromChildren="true"
    android:foreground="?attr/selectableItemBackground">
 
    <TextView android:id="@+id/label"
       android:layout_width="match_parent"
       android:layout_height="wrap_content"
-      android:padding="5dp"
+      android:padding="@dimen/label_padding"
       android:background="@color/colorAccent"
       android:textColor="@android:color/black"/>
 
