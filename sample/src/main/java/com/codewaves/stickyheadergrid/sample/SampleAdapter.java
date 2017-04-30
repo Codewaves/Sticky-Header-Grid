@@ -72,8 +72,11 @@ public class SampleAdapter extends StickyHeaderGridAdapter {
       holder.labelView.setOnClickListener(new View.OnClickListener() {
          @Override
          public void onClick(View v) {
-            labels.get(holder.getSection()).remove(holder.getSectionPosition());
-            notifySectionItemRemoved(holder.getSection(), holder.getSectionPosition());
+            final int section = getAdapterPositionSection(holder.getAdapterPosition());
+            final int offset = getItemSectionOffset(section, holder.getAdapterPosition());
+
+            labels.get(section).remove(offset);
+            notifySectionItemRemoved(section, offset);
             Toast.makeText(holder.labelView.getContext(), label, Toast.LENGTH_SHORT).show();
          }
       });

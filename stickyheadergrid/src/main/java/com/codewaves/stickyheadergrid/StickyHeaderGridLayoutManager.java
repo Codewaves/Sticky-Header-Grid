@@ -356,7 +356,7 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
    }
 
    private int getPositionSectionHeaderHeight(int adapterPosition) {
-      final int section = mAdapter.getPositionSection(adapterPosition);
+      final int section = mAdapter.getAdapterPositionSection(adapterPosition);
       if (section >= 0 && mAdapter.isSectionHeaderSticky(section)) {
          final int offset = mAdapter.getItemSectionOffset(section, adapterPosition);
          if (offset >= 0) {
@@ -381,7 +381,7 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
    }
 
    private int findFirstRowItem(int adapterPosition) {
-      final int section = mAdapter.getPositionSection(adapterPosition);
+      final int section = mAdapter.getAdapterPositionSection(adapterPosition);
       int sectionPosition = mAdapter.getItemSectionOffset(section, adapterPosition);
       while (sectionPosition > 0 && mSpanSizeLookup.getSpanIndex(section, sectionPosition, mSpanCount) != 0) {
          sectionPosition--;
@@ -409,7 +409,7 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
 
    private FillResult fillBottomRow(RecyclerView.Recycler recycler, RecyclerView.State state, int position, int top) {
       final int recyclerWidth = getWidth() - getPaddingLeft() - getPaddingRight();
-      final int section = mAdapter.getPositionSection(position);
+      final int section = mAdapter.getAdapterPositionSection(position);
       int adapterPosition = position;
       int sectionPosition = mAdapter.getItemSectionOffset(section, adapterPosition);
       int spanSize = mSpanSizeLookup.getSpanSize(section, sectionPosition);
@@ -469,7 +469,7 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
 
    private FillResult fillTopRow(RecyclerView.Recycler recycler, RecyclerView.State state, int position, int top) {
       final int recyclerWidth = getWidth() - getPaddingLeft() - getPaddingRight();
-      final int section = mAdapter.getPositionSection(position);
+      final int section = mAdapter.getAdapterPositionSection(position);
       int adapterPosition = position;
       int sectionPosition = mAdapter.getItemSectionOffset(section, adapterPosition);
       int spanSize = mSpanSizeLookup.getSpanSize(section, sectionPosition);
@@ -788,7 +788,7 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
          removeFloatingHeader(recycler);
 
          final LayoutRow firstHeaderRow = mLayoutRows.get(firstHeader);
-         final int section = mAdapter.getPositionSection(firstHeaderRow.adapterPosition);
+         final int section = mAdapter.getAdapterPositionSection(firstHeaderRow.adapterPosition);
          if (section != -1 && mAdapter.isSectionHeaderSticky(section)) {
             final LayoutRow nextHeaderRow = getNextVisibleSectionHeader(firstHeader);
             int offset = 0;
@@ -808,7 +808,7 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
          // We don't have first visible sector header in layout, create floating
          final LayoutRow firstVisibleRow = getFirstVisibleRow();
          if (firstVisibleRow != null) {
-            final int section = mAdapter.getPositionSection(firstVisibleRow.adapterPosition);
+            final int section = mAdapter.getAdapterPositionSection(firstVisibleRow.adapterPosition);
             if (section != -1 && mAdapter.isSectionHeaderSticky(section)) {
                final int headerPosition = mAdapter.getSectionHeaderPosition(section);
                if (mFloatingHeaderView == null || mFloatingHeaderPosition != headerPosition) {

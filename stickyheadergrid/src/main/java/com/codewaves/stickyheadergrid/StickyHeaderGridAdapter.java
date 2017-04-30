@@ -25,8 +25,6 @@ public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGr
 
    @SuppressWarnings("WeakerAccess")
    public static class ViewHolder extends RecyclerView.ViewHolder {
-      int mSection;
-
       public ViewHolder(View itemView) {
          super(itemView);
       }
@@ -35,9 +33,6 @@ public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGr
          return false;
       }
 
-      public int getSection() {
-         return mSection;
-      }
 
       public int getSectionItemViewType() {
          return StickyHeaderGridAdapter.externalViewType(getItemViewType());
@@ -45,14 +40,8 @@ public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGr
    }
 
    public static class ItemViewHolder extends ViewHolder {
-      int mPosition;
-
       public ItemViewHolder(View itemView) {
          super(itemView);
-      }
-
-      public int getSectionPosition() {
-         return mPosition;
       }
    }
 
@@ -100,7 +89,7 @@ public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGr
    }
 
    int getItemViewInternalType(int position) {
-      final int section = getPositionSection(position);
+      final int section = getAdapterPositionSection(position);
       final Section sectionObject = mSections.get(section);
       final int sectionPosition = position - sectionObject.position;
 
@@ -151,8 +140,6 @@ public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGr
       final int internalType = internalViewType(holder.getItemViewType());
       final int externalType = externalViewType(holder.getItemViewType());
 
-      holder.mSection = section;
-
       switch (internalType) {
          case TYPE_HEADER:
             onBindHeaderViewHolder((HeaderViewHolder)holder, section);
@@ -160,7 +147,6 @@ public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGr
          case TYPE_ITEM:
             final ItemViewHolder itemHolder = (ItemViewHolder)holder;
             final int offset = getItemSectionOffset(section, position);
-            itemHolder.mPosition = offset;
             onBindItemViewHolder((ItemViewHolder)holder, section, offset);
             break;
          default:
@@ -170,7 +156,7 @@ public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGr
 
    @Override
    final public int getItemViewType(int position) {
-      final int section = getPositionSection(position);
+      final int section = getAdapterPositionSection(position);
       final Section sectionObject = mSections.get(section);
       final int sectionPosition = position - sectionObject.position;
       final int internalType = getItemViewInternalType(section, sectionPosition);
@@ -189,7 +175,36 @@ public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGr
    }
 
    // Helpers
-   int getItemSectionOffset(int section, int position) {
+   private int getItemSectionHeaderPosition(int position) {
+      return getSectionHeaderPosition(getAdapterPositionSection(position));
+   }
+
+   private int getAdapterPosition(int section, int offset) {
+      if (mSections == null) {
+         calculateSections();
+      }
+
+      if (section < 0) {
+         throw new IndexOutOfBoundsException("section " + section + " < 0");
+      }
+
+      if (section >= mSections.size()) {
+         throw new IndexOutOfBoundsException("section " + section + " >=" + mSections.size());
+      }
+
+      final Section sectionObject = mSections.get(section);
+      return sectionObject.position + offset;
+   }
+
+   /**
+    * Given a <code>section</code> and an adapter <code>position</code> get the offset of an item
+    * inside <code>section</code>.
+    *
+    * @param section section to query
+    * @param position adapter position
+    * @return The item offset inside the section.
+    */
+   public int getItemSectionOffset(int section, int position) {
       if (mSections == null) {
          calculateSections();
       }
@@ -211,7 +226,14 @@ public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGr
       return localPosition - 1;
    }
 
-   int getPositionSection(int position) {
+   /**
+    * Returns the section index having item or header with provided
+    * provider <code>position</code>.
+    *
+    * @param position adapter position
+    * @return The section containing provided adapter position.
+    */
+   public int getAdapterPositionSection(int position) {
       if (mSections == null) {
          calculateSections();
       }
@@ -231,47 +253,26 @@ public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGr
       return mSectionIndices[position];
    }
 
-   int getItemSectionHeaderPosition(int position) {
-      return getSectionHeaderPosition(getPositionSection(position));
-   }
-
-   int getAdapterPosition(int section, int offset) {
-      if (mSections == null) {
-         calculateSections();
-      }
-
-      if (section < 0) {
-         throw new IndexOutOfBoundsException("section " + section + " < 0");
-      }
-
-      if (section >= mSections.size()) {
-         throw new IndexOutOfBoundsException("section " + section + " >=" + mSections.size());
-      }
-
-      final Section sectionObject = mSections.get(section);
-      return sectionObject.position + offset;
-   }
-
    /**
-    * Returns the internal adapter position for given <code>section</code> header. Use
+    * Returns the adapter position for given <code>section</code> header. Use
     * this only for {@link RecyclerView#scrollToPosition(int)} or similar functions.
     * Never directly manipulate adapter items using this position.
     *
     * @param section section to query
-    * @return The internal adapter position.
+    * @return The adapter position.
     */
    public int getSectionHeaderPosition(int section) {
       return getAdapterPosition(section, 0);
    }
 
    /**
-    * Returns the internal adapter position for given <code>section</code> and
+    * Returns the adapter position for given <code>section</code> and
     * <code>offset</code>. Use this only for {@link RecyclerView#scrollToPosition(int)}
     * or similar functions. Never directly manipulate adapter items using this position.
     *
     * @param section section to query
     * @param position item position inside the <code>section</code>
-    * @return The internal adapter position.
+    * @return The adapter position.
     */
    public int getSectionItemPosition(int section, int position) {
       return getAdapterPosition(section, position + 1);
@@ -322,12 +323,12 @@ public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGr
     * be contiguous. Consider using id resources to uniquely identify item view types.
     *
     * @param section section to query
-    * @param position section position to query
+    * @param offset section position to query
     * @return integer value identifying the type of the view needed to represent the item at
     *                 <code>position</code> in <code>section</code>. Type codes need not be
     *                 contiguous.
     */
-   public int getSectionItemViewType(int section, int position) {
+   public int getSectionItemViewType(int section, int offset) {
       return 0;
    }
 
@@ -402,7 +403,8 @@ public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGr
     * use the <code>section</code> parameters while acquiring the
     * related header data inside this method and should not keep a copy of it. If you need the
     * position of a header later on (e.g. in a click listener), use
-    * {@link HeaderViewHolder#getSection()} which will have the updated adapter position.
+    * {@link HeaderViewHolder#getAdapterPosition()} which will have the updated adapter
+    * position. Then you can use {@link #getAdapterPositionSection(int)} to get section index.
     *
     *
     * @param viewHolder The ViewHolder which should be updated to represent the contents of the
@@ -423,16 +425,17 @@ public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGr
     * use the <code>position</code> and <code>section</code> parameters while acquiring the
     * related data item inside this method and should not keep a copy of it. If you need the
     * position of an item later on (e.g. in a click listener), use
-    * {@link ItemViewHolder#getSectionPosition()} which will have the updated adapter
-    * position.
+    * {@link ItemViewHolder#getAdapterPosition()} which will have the updated adapter
+    * position. Then you can use {@link #getAdapterPositionSection(int)} and
+    * {@link #getItemSectionOffset(int, int)}
     *
     *
     * @param viewHolder The ViewHolder which should be updated to represent the contents of the
     *        item at the given position in the data set.
     * @param section The index of the section.
-    * @param position The position of the item within the section.
+    * @param offset The position of the item within the section.
     */
-   public void onBindItemViewHolder(ItemViewHolder viewHolder, int section, int position) {
+   public void onBindItemViewHolder(ItemViewHolder viewHolder, int section, int offset) {
    }
 
    // Notify
