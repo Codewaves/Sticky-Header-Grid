@@ -40,6 +40,11 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
    private int mAverageHeaderHeight;
    private int mHeaderOverlapMargin;
 
+   private HeaderStateChangeListener mHeaderStateListener;
+   private int mStickyHeaderSection = NO_POSITION;
+   private View mStickyHeaderView;
+   private HeaderState mStickyHeadeState;
+
    private View mFillViewSet[];
 
    private SavedState mPendingSavedState;
@@ -50,6 +55,37 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
 
    private final FillResult mFillResult = new FillResult();
    private ArrayList<LayoutRow> mLayoutRows = new ArrayList<>(DEFAULT_ROW_COUNT);
+
+   public enum HeaderState {
+      NORMAL,
+      STICKY,
+      PUSHED
+   }
+
+   /**
+    * The interface to be implemented by listeners to header events from this
+    * LayoutManager.
+    */
+   public interface HeaderStateChangeListener {
+      /**
+       * Called when a section header state changes. The position can be HeaderState.NORMAL,
+       * HeaderState.STICKY, HeaderState.PUSHED.
+       *
+       * <p><li>
+       * NORMAL - the section header is invisible or has normal position
+       * <li>
+       * STICKY - the section header is sticky at the top of RecyclerView
+       * <li>
+       * PUSHED - the section header is sticky and pushed up by next header
+       * </li>
+       *
+       * @param section the section index
+       * @param headerView the header view, can be null if header is out of screen
+       * @param state the new state of the header (NORMAL, STICKY or PUSHED)
+       * @param pushOffset the distance over which section header is pushed up
+       */
+      void onHeaderStateChanged(int section, View headerView, HeaderState state, int pushOffset);
+   }
 
 
    /**
@@ -86,6 +122,25 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
     */
    public SpanSizeLookup getSpanSizeLookup() {
       return mSpanSizeLookup;
+   }
+
+   /**
+    * Returns the current {@link StickyHeaderGridLayoutManager.HeaderStateChangeListener} used by the StickyHeaderGridLayoutManager.
+    *
+    * @return The current {@link StickyHeaderGridLayoutManager.HeaderStateChangeListener} used by the StickyHeaderGridLayoutManager.
+    */
+   public HeaderStateChangeListener getHeaderStateChangeListener() {
+      return mHeaderStateListener;
+   }
+
+   /**
+    * Sets the listener to receive header state changes.
+    *
+    * @param listener {@link StickyHeaderGridLayoutManager.HeaderStateChangeListener} instance to be used to receive header
+    *                 state changes
+    */
+   public void setHeaderStateChangeListener(HeaderStateChangeListener listener) {
+      mHeaderStateListener = listener;
    }
 
    /**
@@ -777,11 +832,43 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
       removeAndRecycleView(view, recycler);
    }
 
+   private void onHeaderChanged(int section, View view, HeaderState state, int pushOffset) {
+      if (mStickyHeaderSection != NO_POSITION && section != mStickyHeaderSection) {
+         onHeaderUnstick();
+      }
+
+      final boolean headerStateChanged = mStickyHeaderSection != section || mStickyHeadeState != state || state == HeaderState.PUSHED;
+
+      mStickyHeaderSection = section;
+      mStickyHeaderView = view;
+      mStickyHeadeState = state;
+
+      if (headerStateChanged && mHeaderStateListener != null) {
+         mHeaderStateListener.onHeaderStateChanged(section, view, state, pushOffset);
+      }
+   }
+
+   private void onHeaderUnstick() {
+      if (mStickyHeaderSection != NO_POSITION) {
+         if (mHeaderStateListener != null) {
+            mHeaderStateListener.onHeaderStateChanged(mStickyHeaderSection, mStickyHeaderView, HeaderState.NORMAL, 0);
+         }
+         mStickyHeaderSection = NO_POSITION;
+         mStickyHeaderView = null;
+         mStickyHeadeState = HeaderState.NORMAL;
+      }
+   }
+
    private void stickTopHeader(RecyclerView.Recycler recycler) {
       final int firstHeader = getFirstVisibleSectionHeader();
       final int top = getPaddingTop();
       final int left = getPaddingLeft();
       final int right = getWidth() - getPaddingRight();
+
+      int notifySection = NO_POSITION;
+      View notifyView = null;
+      HeaderState notifyState = HeaderState.NORMAL;
+      int notifyOffset = 0;
 
       if (firstHeader != NO_POSITION) {
          // Top row is header, floating header is not visible, remove
@@ -789,7 +876,7 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
 
          final LayoutRow firstHeaderRow = mLayoutRows.get(firstHeader);
          final int section = mAdapter.getAdapterPositionSection(firstHeaderRow.adapterPosition);
-         if (section != -1 && mAdapter.isSectionHeaderSticky(section)) {
+         if (mAdapter.isSectionHeaderSticky(section)) {
             final LayoutRow nextHeaderRow = getNextVisibleSectionHeader(firstHeader);
             int offset = 0;
             if (nextHeaderRow != null) {
@@ -799,8 +886,11 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
 
             mStickOffset = top - firstHeaderRow.top - offset;
             firstHeaderRow.headerView.offsetTopAndBottom(mStickOffset);
+
+            onHeaderChanged(section, firstHeaderRow.headerView, offset == 0 ? HeaderState.STICKY : HeaderState.PUSHED, offset);
          }
          else {
+            onHeaderUnstick();
             mStickOffset = 0;
          }
       }
@@ -809,7 +899,7 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
          final LayoutRow firstVisibleRow = getFirstVisibleRow();
          if (firstVisibleRow != null) {
             final int section = mAdapter.getAdapterPositionSection(firstVisibleRow.adapterPosition);
-            if (section != -1 && mAdapter.isSectionHeaderSticky(section)) {
+            if (mAdapter.isSectionHeaderSticky(section)) {
                final int headerPosition = mAdapter.getSectionHeaderPosition(section);
                if (mFloatingHeaderView == null || mFloatingHeaderPosition != headerPosition) {
                   removeFloatingHeader(recycler);
@@ -832,7 +922,14 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
                }
 
                layoutDecorated(mFloatingHeaderView, left, top - offset, right, top + height - offset);
+               onHeaderChanged(section, mFloatingHeaderView, offset == 0 ? HeaderState.STICKY : HeaderState.PUSHED, offset);
             }
+            else {
+               onHeaderUnstick();
+            }
+         }
+         else {
+            onHeaderUnstick();
          }
       }
    }
@@ -865,6 +962,15 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
       mFloatingHeaderPosition = -1;
       mAverageHeaderHeight = 0;
       mLayoutRows.clear();
+
+      if (mStickyHeaderSection != NO_POSITION) {
+         if (mHeaderStateListener != null) {
+            mHeaderStateListener.onHeaderStateChanged(mStickyHeaderSection, mStickyHeaderView, HeaderState.NORMAL, 0);
+         }
+         mStickyHeaderSection = NO_POSITION;
+         mStickyHeaderView = null;
+         mStickyHeadeState = HeaderState.NORMAL;
+      }
    }
 
    @Override

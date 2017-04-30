@@ -1,11 +1,12 @@
 package com.codewaves.stickyheadergrid.sample;
 
-import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 
 import com.codewaves.sample.R;
 import com.codewaves.stickyheadergrid.StickyHeaderGridLayoutManager;
@@ -30,6 +31,13 @@ public class SampleActivity extends AppCompatActivity {
          @Override
          public int getSpanSize(int section, int position) {
             return (3 - position % 3);
+         }
+      });
+      mLayoutManager.setHeaderStateChangeListener(new StickyHeaderGridLayoutManager.HeaderStateChangeListener() {
+         @Override
+         public void onHeaderStateChanged(int section, View headerView, StickyHeaderGridLayoutManager.HeaderState state, int pushOffset) {
+            final String stateName = state.toString();
+            Log.i("SampleActivity", "Header state changed at section " + section + ", push offset " + pushOffset + ", state " + stateName);
          }
       });
       //recycler.addItemDecoration(new DividerItemDecoration(this, VERTICAL));

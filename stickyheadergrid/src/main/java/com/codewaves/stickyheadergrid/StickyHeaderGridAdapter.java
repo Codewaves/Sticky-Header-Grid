@@ -7,6 +7,8 @@ import android.view.ViewGroup;
 import java.security.InvalidParameterException;
 import java.util.ArrayList;
 
+import static android.support.v7.widget.RecyclerView.NO_POSITION;
+
 /**
  * Created by Sergej Kravcenko on 4/24/2017.
  * Copyright (c) 2017 Sergej Kravcenko
@@ -239,7 +241,7 @@ public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGr
       }
 
       if (getItemCount() == 0) {
-         return -1;
+         return NO_POSITION;
       }
 
       if (position < 0) {
