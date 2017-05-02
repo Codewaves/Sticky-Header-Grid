@@ -15,6 +15,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 import static android.support.v7.widget.RecyclerView.NO_POSITION;
+import static com.codewaves.stickyheadergrid.StickyHeaderGridAdapter.TYPE_HEADER;
+import static com.codewaves.stickyheadergrid.StickyHeaderGridAdapter.TYPE_ITEM;
 
 /**
  * Created by Sergej Kravcenko on 4/24/2017.
@@ -357,7 +359,7 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
 
          int bottom;
          final int viewType = mAdapter.getItemViewInternalType(adapterPosition);
-         if (viewType == StickyHeaderGridAdapter.TYPE_HEADER) {
+         if (viewType == TYPE_HEADER) {
             final View v = recycler.getViewForPosition(adapterPosition);
             addView(v);
             measureChildWithMargins(v, 0, 0);
@@ -659,7 +661,7 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
       }
 
       final int viewType = mAdapter.getItemViewInternalType(adapterPosition);
-      if (viewType == StickyHeaderGridAdapter.TYPE_HEADER) {
+      if (viewType == TYPE_HEADER) {
          final View v = recycler.getViewForPosition(adapterPosition);
          if (isTop) {
             addView(v, mHeadersStartPosition);
@@ -773,6 +775,100 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
 
       clearViewsAndStickHeaders(recycler, state, dy >= 0);
       return  scrolled;
+   }
+
+   /**
+    * Returns first visible item excluding headers.
+    *
+    * @param visibleTop Whether item top edge should be visible or not
+    * @return The first visible item adapter position closest to top of the layout.
+    */
+   public int getFirstVisibleItemPosition(boolean visibleTop) {
+      return getFirstVisiblePosition(TYPE_ITEM, visibleTop);
+   }
+
+   /**
+    * Returns last visible item excluding headers.
+    *
+    * @return The last visible item adapter position closest to bottom of the layout.
+    */
+   public int getLastVisibleItemPosition() {
+      return getLastVisiblePosition(TYPE_ITEM);
+   }
+
+   /**
+    * Returns first visible header.
+    *
+    * @param visibleTop Whether header top edge should be visible or not
+    * @return The first visible header adapter position closest to top of the layout.
+    */
+   public int getFirstVisibleHeaderPosition(boolean visibleTop) {
+      return getFirstVisiblePosition(TYPE_HEADER, visibleTop);
+   }
+
+   /**
+    * Returns last visible header.
+    *
+    * @return The last visible header adapter position closest to bottom of the layout.
+    */
+   public int getLastVisibleHeaderPosition() {
+      return getLastVisiblePosition(TYPE_HEADER);
+   }
+
+   private int getFirstVisiblePosition(int type, boolean visibleTop) {
+      if (type == TYPE_ITEM && mHeadersStartPosition <= 0) {
+         return NO_POSITION;
+      }
+      if (type == TYPE_HEADER && mHeadersStartPosition >= getChildCount()) {
+         return NO_POSITION;
+      }
+
+      int viewFrom = type == TYPE_ITEM ? 0 : mHeadersStartPosition;
+      int viewTo = type == TYPE_ITEM ? mHeadersStartPosition : getChildCount();
+      final int recyclerTop = getPaddingTop();
+      for (int i = viewFrom; i < viewTo; ++i) {
+         final View v = getChildAt(i);
+         final int adapterPosition = getPosition(v);
+         final int headerHeight = getPositionSectionHeaderHeight(adapterPosition);
+         final int top = getDecoratedTop(v);
+         final int bottom = getDecoratedBottom(v);
+
+         if (visibleTop) {
+            if (top >= recyclerTop + headerHeight) {
+               return adapterPosition;
+            }
+         }
+         else {
+            if (bottom >= recyclerTop + headerHeight) {
+               return adapterPosition;
+            }
+         }
+      }
+
+      return NO_POSITION;
+   }
+
+   private int getLastVisiblePosition(int type) {
+      if (type == TYPE_ITEM && mHeadersStartPosition <= 0) {
+         return NO_POSITION;
+      }
+      if (type == TYPE_HEADER && mHeadersStartPosition >= getChildCount()) {
+         return NO_POSITION;
+      }
+
+      int viewFrom = type == TYPE_ITEM ? mHeadersStartPosition - 1 : getChildCount() - 1;
+      int viewTo = type == TYPE_ITEM ? 0 : mHeadersStartPosition;
+      final int recyclerBottom = getHeight() - getPaddingBottom();
+      for (int i = viewFrom; i >= viewTo; --i) {
+         final View v = getChildAt(i);
+         final int top = getDecoratedTop(v);
+
+         if (top < recyclerBottom) {
+            return getPosition(v);
+         }
+      }
+
+      return NO_POSITION;
    }
 
    private LayoutRow getFirstVisibleRow() {

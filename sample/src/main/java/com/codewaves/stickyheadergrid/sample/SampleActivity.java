@@ -3,17 +3,16 @@ package com.codewaves.stickyheadergrid.sample;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
 
 import com.codewaves.sample.R;
 import com.codewaves.stickyheadergrid.StickyHeaderGridLayoutManager;
 
 public class SampleActivity extends AppCompatActivity {
-   private static final int SECTIONS = 30;
-   private static final int SECTION_ITEMS = 8;
+   private static final int SPAN_SIZE = 3;
+   private static final int SECTIONS = 10;
+   private static final int SECTION_ITEMS = 5;
 
    private RecyclerView mRecycler;
    private StickyHeaderGridLayoutManager mLayoutManager;
@@ -25,22 +24,25 @@ public class SampleActivity extends AppCompatActivity {
 
       // Setup recycler
       mRecycler = (RecyclerView)findViewById(R.id.recycler);
-      mLayoutManager = new StickyHeaderGridLayoutManager(3);
+      mLayoutManager = new StickyHeaderGridLayoutManager(SPAN_SIZE);
       mLayoutManager.setHeaderBottomOverlapMargin(getResources().getDimensionPixelSize(R.dimen.header_shadow_size));
       mLayoutManager.setSpanSizeLookup(new StickyHeaderGridLayoutManager.SpanSizeLookup() {
          @Override
          public int getSpanSize(int section, int position) {
-            return (3 - position % 3);
+            switch (section) {
+               case 0:
+                  return 3;
+               case 1:
+                  return 1;
+               case 2:
+                  return 3 - position % 3;
+               case 3:
+                  return position % 2 + 1;
+               default:
+                  return 1;
+            }
          }
       });
-      mLayoutManager.setHeaderStateChangeListener(new StickyHeaderGridLayoutManager.HeaderStateChangeListener() {
-         @Override
-         public void onHeaderStateChanged(int section, View headerView, StickyHeaderGridLayoutManager.HeaderState state, int pushOffset) {
-            final String stateName = state.toString();
-            Log.i("SampleActivity", "Header state changed at section " + section + ", push offset " + pushOffset + ", state " + stateName);
-         }
-      });
-      //recycler.addItemDecoration(new DividerItemDecoration(this, VERTICAL));
       mRecycler.setLayoutManager(mLayoutManager);
       mRecycler.setAdapter(new SampleAdapter(SECTIONS, SECTION_ITEMS));
    }
@@ -56,22 +58,22 @@ public class SampleActivity extends AppCompatActivity {
       int id = item.getItemId();
       switch (id) {
          case R.id.action_top:
-            mRecycler.scrollToPosition(2);
+            mRecycler.scrollToPosition(0);
             break;
          case R.id.action_center:
-            mRecycler.scrollToPosition(SECTIONS * SECTION_ITEMS / 2);
+            mRecycler.scrollToPosition(mRecycler.getAdapter().getItemCount() / 2);
             break;
          case R.id.action_bottom:
-            mRecycler.scrollToPosition(SECTIONS * (SECTION_ITEMS + 1) - 1);
+            mRecycler.scrollToPosition(mRecycler.getAdapter().getItemCount() - 1);
             break;
          case R.id.action_top_smooth:
-            mRecycler.smoothScrollToPosition(3);
+            mRecycler.smoothScrollToPosition(0);
             break;
          case R.id.action_center_smooth:
-            mRecycler.smoothScrollToPosition(SECTIONS * SECTION_ITEMS / 2);
+            mRecycler.smoothScrollToPosition(mRecycler.getAdapter().getItemCount() / 2);
             break;
          case R.id.action_bottom_smooth:
-            mRecycler.smoothScrollToPosition(SECTIONS * (SECTION_ITEMS + 1) - 1);
+            mRecycler.smoothScrollToPosition(mRecycler.getAdapter().getItemCount() - 1);
             break;
       }
       return super.onOptionsItemSelected(item);
