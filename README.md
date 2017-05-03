@@ -1,4 +1,61 @@
 # Sticky Header Grid Layout Manager
+[![Download](https://api.bintray.com/packages/codewaves/maven/sticky-header-grid/images/download.svg) ](https://bintray.com/codewaves/maven/sticky-header-grid/_latestVersion)
+[![Build Status](https://travis-ci.org/Codewaves/Sticky-Header-Grid.svg?branch=master)](https://travis-ci.org/Codewaves/Sticky-Header-Grid)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/6ef37130881446ef94953775e9598e40)](https://www.codacy.com/app/Codewaves/Sticky-Header-Grid?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=Codewaves/Sticky-Header-Grid&amp;utm_campaign=Badge_Grade)
+[![GitHub license](https://img.shields.io/github/license/mashape/apistatus.svg)](https://github.com/Codewaves/Sticky-Header-Grid/blob/master/LICENSE.txt)
+
+Android RecyclerView sticky header list/grid layout.
+
+## Download
+
+Download [the latest AAR][1] or grab via Gradle:
+```groovy
+compile 'com.codewaves.stickyheadergrid:stickyheadergrid:0.9.0'
+```
+
+## Features
+
+* Sticky section headers
+* Individually control header stickiness
+* Span support like in GridLayoutManager
+* Header bottom shadows
+* Header state listener
+* Smooth scrolling
+* Scrollbars
+
+## Usage
+
+To use library:
+
+1. Implement an adapter by subclassing StickyHeaderGridAdapter
+2. Override getSectionCount, getSectionItemCount, onCreateHeaderViewHolder, 
+onCreateItemViewHolder, onBindHeaderViewHolder, onBindItemViewHolder
+3. Create a StickyHeaderGridLayoutManager with required column count and assign it to your RecyclerView.
+4. Use only StickyHeaderGridAdapter::notify* methods
+
+### Span support
+
+Like in GridLayoutManager, use SpanSizeLookup to provide span information.
+
+### Individual stickiness
+
+Override adapter isSectionHeaderSticky method and return `true` to make section header 
+sticky, `false` otherwise.
+
+### Header bottom shadow
+
+Because of the limitation of old Android platforms we cannot use an elevation. Little workaround 
+was made to support bottom header shadows. Use layout manager .setHeaderBottomOverlapMargin 
+method to set size of the header overlapping part and insert shadow into header layout. Overlapping
+part will be drawn over the first section item.
+
+### Header state listener
+
+Use HeaderStateChangeListener to receive information about headers state.
+
+## Other features
+
+If you missing some feature, feel free to create an issue or pull request.
 
 ## Author
 
@@ -29,5 +86,5 @@ Sergej Kravcenko - [Codewaves][2]
     OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
     SOFTWARE.
 
- [1]: https://bintray.com/codewaves/maven/youtube-thumbnail-view/_latestVersion
+ [1]: https://bintray.com/codewaves/maven/sticky-header-grid/_latestVersion
  [2]: http://www.codewaves.com

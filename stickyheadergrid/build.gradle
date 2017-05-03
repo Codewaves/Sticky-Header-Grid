@@ -7,7 +7,7 @@ ext {
 
     publishedGroupId = 'com.codewaves.stickyheadergrid'
     libraryName = 'Sticky-Header-Grid'
-    artifact = 'library'
+    artifact = 'stickyheadergrid'
 
     libraryDescription = 'Sticky header grid layout manager for RecycleView'
 
