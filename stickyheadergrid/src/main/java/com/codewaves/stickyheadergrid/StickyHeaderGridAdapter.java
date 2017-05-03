@@ -15,7 +15,7 @@ import static android.support.v7.widget.RecyclerView.NO_POSITION;
  */
 
 @SuppressWarnings({"unused", "WeakerAccess"})
-public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGridAdapter.ViewHolder> {
+public abstract class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGridAdapter.ViewHolder> {
    public static final String TAG = "StickyHeaderGridAdapter";
 
    public static final int TYPE_HEADER = 0;
@@ -59,9 +59,9 @@ public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGr
    }
 
    private static class Section {
-      int position;
-      int itemNumber;
-      int length;
+      private int position;
+      private int itemNumber;
+      private int length;
    }
 
    private void calculateSections() {
@@ -90,7 +90,7 @@ public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGr
       }
    }
 
-   int getItemViewInternalType(int position) {
+   protected int getItemViewInternalType(int position) {
       final int section = getAdapterPositionSection(position);
       final Section sectionObject = mSections.get(section);
       final int sectionPosition = position - sectionObject.position;
@@ -128,8 +128,9 @@ public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGr
             return onCreateHeaderViewHolder(parent, externalType);
          case TYPE_ITEM:
             return onCreateItemViewHolder(parent, externalType);
+         default:
+            throw new InvalidParameterException("Invalid viewType: " + viewType);
       }
-      throw new InvalidParameterException("invalid viewType: " + viewType);
    }
 
    @Override
@@ -365,9 +366,7 @@ public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGr
     * @see #getSectionHeaderViewType(int)
     * @see #onBindHeaderViewHolder(HeaderViewHolder, int)
     */
-   public HeaderViewHolder onCreateHeaderViewHolder(ViewGroup parent, int headerType) {
-      return null;
-   }
+   public abstract HeaderViewHolder onCreateHeaderViewHolder(ViewGroup parent, int headerType);
 
    /**
     * Called when RecyclerView needs a new {@link ItemViewHolder} of the given type to represent
@@ -390,9 +389,7 @@ public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGr
     * @see #getSectionItemViewType(int, int)
     * @see #onBindItemViewHolder(ItemViewHolder, int, int)
     */
-   public ItemViewHolder onCreateItemViewHolder(ViewGroup parent, int itemType) {
-      return null;
-   }
+   public abstract ItemViewHolder onCreateItemViewHolder(ViewGroup parent, int itemType);
 
    /**
     * Called by RecyclerView to display the data at the specified position. This method should
@@ -413,8 +410,7 @@ public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGr
     *        header at the given position in the data set.
     * @param section The index of the section.
     */
-   public void onBindHeaderViewHolder(HeaderViewHolder viewHolder, int section) {
-   }
+   public abstract void onBindHeaderViewHolder(HeaderViewHolder viewHolder, int section);
 
    /**
     * Called by RecyclerView to display the data at the specified position. This method should
@@ -437,8 +433,7 @@ public class StickyHeaderGridAdapter extends RecyclerView.Adapter<StickyHeaderGr
     * @param section The index of the section.
     * @param offset The position of the item within the section.
     */
-   public void onBindItemViewHolder(ItemViewHolder viewHolder, int section, int offset) {
-   }
+   public abstract void onBindItemViewHolder(ItemViewHolder viewHolder, int section, int offset);
 
    // Notify
    /**

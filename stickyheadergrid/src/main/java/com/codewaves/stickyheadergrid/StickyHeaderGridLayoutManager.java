@@ -73,13 +73,12 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
        * Called when a section header state changes. The position can be HeaderState.NORMAL,
        * HeaderState.STICKY, HeaderState.PUSHED.
        *
-       * <p><li>
-       * NORMAL - the section header is invisible or has normal position
-       * <li>
-       * STICKY - the section header is sticky at the top of RecyclerView
-       * <li>
-       * PUSHED - the section header is sticky and pushed up by next header
-       * </li>
+       * <p>
+       * <ul>
+       * <li>NORMAL - the section header is invisible or has normal position</li>
+       * <li>STICKY - the section header is sticky at the top of RecyclerView</li>
+       * <li>PUSHED - the section header is sticky and pushed up by next header</li>
+       * </ul
        *
        * @param section the section index
        * @param headerView the header view, can be null if header is out of screen
@@ -654,10 +653,8 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
       final int right = getWidth() - getPaddingRight();
 
       // Reattach floating header if needed
-      if (isTop) {
-         if (mFloatingHeaderView != null && adapterPosition == mFloatingHeaderPosition) {
-            removeFloatingHeader(recycler);
-         }
+      if (isTop && mFloatingHeaderView != null && adapterPosition == mFloatingHeaderPosition) {
+         removeFloatingHeader(recycler);
       }
 
       final int viewType = mAdapter.getItemViewInternalType(adapterPosition);
@@ -690,6 +687,31 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
          else {
             final FillResult result = fillBottomRow(recycler, state, adapterPosition, top);
             mLayoutRows.add(new LayoutRow(result.adapterPosition, result.length, top, top + result.height));
+         }
+      }
+   }
+
+   private void addOffScreenRows(RecyclerView.Recycler recycler, RecyclerView.State state, int recyclerTop, int recyclerBottom, boolean bottom) {
+      if (bottom) {
+         // Bottom
+         while (true) {
+            final LayoutRow bottomRow = getBottomRow();
+            final int adapterPosition = bottomRow.adapterPosition + bottomRow.length;
+            if (bottomRow.bottom >= recyclerBottom + getExtraLayoutSpace(state) || adapterPosition >= state.getItemCount()) {
+               break;
+            }
+            addRow(recycler, state, false, adapterPosition, bottomRow.bottom);
+         }
+      }
+      else {
+         // Top
+         while (true) {
+            final LayoutRow topRow = getTopRow();
+            final int adapterPosition = topRow.adapterPosition - 1;
+            if (topRow.top < recyclerTop - getExtraLayoutSpace(state) || adapterPosition < 0) {
+               break;
+            }
+            addRow(recycler, state, true, adapterPosition, topRow.top);
          }
       }
    }
@@ -749,28 +771,7 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
 
       // Fill extra offscreen rows for smooth scroll
       if (scrolled == dy) {
-         if (dy >= 0) {
-            // Bottom
-            while (true) {
-               final LayoutRow bottomRow = getBottomRow();
-               final int adapterPosition = bottomRow.adapterPosition + bottomRow.length;
-               if (bottomRow.bottom >= recyclerBottom + getExtraLayoutSpace(state) || adapterPosition >= state.getItemCount()) {
-                  break;
-               }
-               addRow(recycler, state, false, adapterPosition, bottomRow.bottom);
-            }
-         }
-         else {
-            // Top
-            while (true) {
-               final LayoutRow topRow = getTopRow();
-               final int adapterPosition = topRow.adapterPosition - 1;
-               if (topRow.top < recyclerTop - getExtraLayoutSpace(state) || adapterPosition < 0) {
-                  break;
-               }
-               addRow(recycler, state, true, adapterPosition, topRow.top);
-            }
-         }
+         addOffScreenRows(recycler, state, recyclerTop, recyclerBottom, dy >= 0);
       }
 
       clearViewsAndStickHeaders(recycler, state, dy >= 0);
@@ -819,7 +820,7 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
       if (type == TYPE_ITEM && mHeadersStartPosition <= 0) {
          return NO_POSITION;
       }
-      if (type == TYPE_HEADER && mHeadersStartPosition >= getChildCount()) {
+      else if (type == TYPE_HEADER && mHeadersStartPosition >= getChildCount()) {
          return NO_POSITION;
       }
 
@@ -852,7 +853,7 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
       if (type == TYPE_ITEM && mHeadersStartPosition <= 0) {
          return NO_POSITION;
       }
-      if (type == TYPE_HEADER && mHeadersStartPosition >= getChildCount()) {
+      else if (type == TYPE_HEADER && mHeadersStartPosition >= getChildCount()) {
          return NO_POSITION;
       }
 
@@ -933,7 +934,7 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
          onHeaderUnstick();
       }
 
-      final boolean headerStateChanged = mStickyHeaderSection != section || mStickyHeadeState != state || state == HeaderState.PUSHED;
+      final boolean headerStateChanged = mStickyHeaderSection != section || !mStickyHeadeState.equals(state) || state.equals(HeaderState.PUSHED);
 
       mStickyHeaderSection = section;
       mStickyHeaderView = view;
@@ -1119,8 +1120,8 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
    public static class LayoutParams extends RecyclerView.LayoutParams {
       public static final int INVALID_SPAN_ID = -1;
 
-      int mSpanIndex = INVALID_SPAN_ID;
-      int mSpanSize = 0;
+      private int mSpanIndex = INVALID_SPAN_ID;
+      private int mSpanSize = 0;
 
       public LayoutParams(Context c, AttributeSet attrs) {
          super(c, attrs);
@@ -1226,8 +1227,8 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
    }
 
    public static class SavedState implements Parcelable {
-      int mAnchorPosition;
-      int mAnchorOffset;
+      private int mAnchorPosition;
+      private int mAnchorOffset;
 
       public SavedState() {
 
@@ -1276,12 +1277,12 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
    }
 
    private static class LayoutRow {
-      boolean header;
-      View headerView;
-      int adapterPosition;
-      int length;
-      int top;
-      int bottom;
+      private boolean header;
+      private View headerView;
+      private int adapterPosition;
+      private int length;
+      private int top;
+      private int bottom;
 
       public LayoutRow(int adapterPosition, int length, int top, int bottom) {
          this.header = false;
@@ -1307,9 +1308,9 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
    }
 
    private static class FillResult {
-      View edgeView;
-      int adapterPosition;
-      int length;
-      int height;
+      private View edgeView;
+      private int adapterPosition;
+      private int length;
+      private int height;
    }
 }
