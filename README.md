@@ -6,6 +6,8 @@
 
 Android RecyclerView sticky header list/grid layout.
 
+![](images/sample.gif)
+
 ## Download
 
 Download [the latest AAR][1] or grab via Gradle:
