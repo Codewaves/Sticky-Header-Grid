@@ -399,7 +399,7 @@ public abstract class StickyHeaderGridAdapter extends RecyclerView.Adapter<Stick
     * Note that unlike {@link android.widget.ListView}, RecyclerView will not call this method
     * again if the position of the header changes in the data set unless the header itself is
     * invalidated or the new position cannot be determined. For this reason, you should only
-    * use the <code>section</code> parameters while acquiring the
+    * use the <code>section</code> parameter while acquiring the
     * related header data inside this method and should not keep a copy of it. If you need the
     * position of a header later on (e.g. in a click listener), use
     * {@link HeaderViewHolder#getAdapterPosition()} which will have the updated adapter
@@ -420,7 +420,7 @@ public abstract class StickyHeaderGridAdapter extends RecyclerView.Adapter<Stick
     * Note that unlike {@link android.widget.ListView}, RecyclerView will not call this method
     * again if the position of the item changes in the data set unless the item itself is
     * invalidated or the new position cannot be determined. For this reason, you should only
-    * use the <code>position</code> and <code>section</code> parameters while acquiring the
+    * use the <code>offset</code> and <code>section</code> parameters while acquiring the
     * related data item inside this method and should not keep a copy of it. If you need the
     * position of an item later on (e.g. in a click listener), use
     * {@link ItemViewHolder#getAdapterPosition()} which will have the updated adapter

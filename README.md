@@ -35,6 +35,21 @@ onCreateItemViewHolder, onBindHeaderViewHolder, onBindItemViewHolder
 3. Create a StickyHeaderGridLayoutManager with required column count and assign it to your RecyclerView.
 4. Use only StickyHeaderGridAdapter::notify* methods
 
+If you need the position of an item in a click listener, always use holder .getAdapterPosition() which will have 
+the correct adapter position.
+ 
+```java
+holder.<clickable view>.setOnClickListener(new View.OnClickListener() {
+   @Override
+   public void onClick(View v) {
+      final int section = getAdapterPositionSection(holder.getAdapterPosition());
+      final int offset = getItemSectionOffset(section, holder.getAdapterPosition());
+
+      // Do click action here using setction and offset
+   }
+});
+```
+
 ### Span support
 
 Like in GridLayoutManager, use SpanSizeLookup to provide span information.
