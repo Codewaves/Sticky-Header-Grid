@@ -30,10 +30,12 @@ compile 'com.codewaves.stickyheadergrid:stickyheadergrid:0.9.0'
 To use library:
 
 1. Implement an adapter by subclassing StickyHeaderGridAdapter
-2. Override getSectionCount, getSectionItemCount, onCreateHeaderViewHolder, 
-onCreateItemViewHolder, onBindHeaderViewHolder, onBindItemViewHolder
-3. Create a StickyHeaderGridLayoutManager with required column count and assign it to your RecyclerView.
-4. Use only StickyHeaderGridAdapter::notify* methods
+2. Create holder class for each header and item type. Use HeaderViewHolder and ItemViewHolder as base classes.
+3. Override and implement getSectionCount(), getSectionItemCount(int section), onCreateHeaderViewHolder(ViewGroup parent, int headerType), 
+onCreateItemViewHolder(ViewGroup parent, int itemType), onBindHeaderViewHolder(HeaderViewHolder viewHolder, int section), 
+onBindItemViewHolder(ItemViewHolder viewHolder, int section, int offset).
+4. Create a StickyHeaderGridLayoutManager with required column count and assign it to your RecyclerView.
+5. Use only StickyHeaderGridAdapter::notify* methods
 
 If you need the position of an item in a click listener, always use holder .getAdapterPosition() which will have 
 the correct adapter position.
