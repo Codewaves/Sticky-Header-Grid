@@ -328,9 +328,9 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
          mPendingSavedState = null;
       }
 
-      if (mFirstViewPosition < 0 || mFirstViewPosition > state.getItemCount()) {
+      if (mFirstViewPosition < 0 || mFirstViewPosition >= state.getItemCount()) {
          mFirstViewPosition = 0;
-         mFirstViewOffset = getPaddingTop();
+         mFirstViewOffset = 0;
          mPendingScrollPosition = NO_POSITION;
       }
 
