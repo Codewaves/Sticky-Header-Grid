@@ -52,7 +52,8 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
    private SavedState mPendingSavedState;
    private int mPendingScrollPosition = NO_POSITION;
    private int mPendingScrollPositionOffset;
-   private int mFirstViewPosition;
+   private int mFirstViewSection = NO_POSITION;
+   private int mFirstViewItem;
    private int mFirstViewOffset;
 
    private final FillResult mFillResult = new FillResult();
@@ -209,7 +210,8 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
 
       SavedState state = new SavedState();
       if (getChildCount() > 0) {
-         state.mAnchorPosition = mFirstViewPosition;
+         state.mAnchorSection = mFirstViewSection;
+         state.mAnchorItem = mFirstViewItem;
          state.mAnchorOffset = mFirstViewOffset;
       }
       else {
@@ -310,6 +312,18 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
       return new PointF(0, targetPosition - firstRow.adapterPosition);
    }
 
+   private int getAdapterPositionChecked(int section, int offset) {
+      if (section < 0 || section >= mAdapter.getSectionCount()) {
+         return NO_POSITION;
+      }
+
+      if (offset < 0 || offset >= mAdapter.getSectionItemCount(section)) {
+         return mAdapter.getSectionHeaderPosition(section);
+      }
+
+      return mAdapter.getSectionItemPosition(section, offset);
+   }
+
    @Override
    public void onLayoutChildren(RecyclerView.Recycler recycler, RecyclerView.State state) {
       if (mAdapter == null || state.getItemCount() == 0) {
@@ -318,39 +332,45 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
          return;
       }
 
+      int pendingAdapterPosition;
+      int pendingAdapterOffset;
       if (mPendingScrollPosition >= 0) {
-         mFirstViewPosition = mPendingScrollPosition;
-         mFirstViewOffset = mPendingScrollPositionOffset;
+         pendingAdapterPosition = mPendingScrollPosition;
+         pendingAdapterOffset = mPendingScrollPositionOffset;
       }
       else if (mPendingSavedState != null && mPendingSavedState.hasValidAnchor()) {
-         mFirstViewPosition = mPendingSavedState.mAnchorPosition;
-         mFirstViewOffset = mPendingSavedState.mAnchorOffset;
+         pendingAdapterPosition = getAdapterPositionChecked(mPendingSavedState.mAnchorSection, mPendingSavedState.mAnchorItem);
+         pendingAdapterOffset = mPendingSavedState.mAnchorOffset;
          mPendingSavedState = null;
       }
+      else {
+         pendingAdapterPosition = getAdapterPositionChecked(mFirstViewSection, mFirstViewItem);
+         pendingAdapterOffset = mFirstViewOffset;
+      }
 
-      if (mFirstViewPosition < 0 || mFirstViewPosition >= state.getItemCount()) {
-         mFirstViewPosition = 0;
-         mFirstViewOffset = 0;
+      if (pendingAdapterPosition < 0 || pendingAdapterPosition >= state.getItemCount()) {
+         pendingAdapterPosition = 0;
+         pendingAdapterOffset = 0;
          mPendingScrollPosition = NO_POSITION;
       }
 
-      if (mFirstViewOffset > 0) {
-         mFirstViewOffset = 0;
+      if (pendingAdapterOffset > 0) {
+         pendingAdapterOffset = 0;
       }
 
       detachAndScrapAttachedViews(recycler);
       clearState();
 
       // Make sure mFirstViewPosition is the start of the row
-      mFirstViewPosition = findFirstRowItem(mFirstViewPosition);
+      pendingAdapterPosition = findFirstRowItem(pendingAdapterPosition);
 
       int left = getPaddingLeft();
       int right = getWidth() - getPaddingRight();
       final int recyclerBottom = getHeight() - getPaddingBottom();
       int totalHeight = 0;
 
-      int adapterPosition = mFirstViewPosition;
-      int top = getPaddingTop() + mFirstViewOffset;
+      int adapterPosition = pendingAdapterPosition;
+      int top = getPaddingTop() + pendingAdapterOffset;
       while (true) {
          if (adapterPosition >= state.getItemCount()) {
             break;
@@ -398,7 +418,7 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
       if (mPendingScrollPosition >= 0) {
          mPendingScrollPosition = NO_POSITION;
 
-         final int topOffset = getPositionSectionHeaderHeight(mFirstViewPosition);
+         final int topOffset = getPositionSectionHeaderHeight(pendingAdapterPosition);
          if (topOffset != 0) {
             scrollVerticallyBy(-topOffset, recycler, state);
          }
@@ -1033,13 +1053,15 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
 
    private void updateTopPosition() {
       if (getChildCount() == 0) {
-         mFirstViewPosition = 0;
+         mFirstViewSection = NO_POSITION;
+         mFirstViewItem = 0;
          mFirstViewOffset = 0;
       }
 
       final LayoutRow firstVisibleRow = getFirstVisibleRow();
       if (firstVisibleRow != null) {
-         mFirstViewPosition = firstVisibleRow.adapterPosition;
+         mFirstViewSection = mAdapter.getAdapterPositionSection(firstVisibleRow.adapterPosition);
+         mFirstViewItem = mAdapter.getItemSectionOffset(mFirstViewSection, firstVisibleRow.adapterPosition);
          mFirstViewOffset = Math.min(firstVisibleRow.top - getPaddingTop(), 0);
       }
    }
@@ -1227,7 +1249,8 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
    }
 
    public static class SavedState implements Parcelable {
-      private int mAnchorPosition;
+      private int mAnchorSection;
+      private int mAnchorItem;
       private int mAnchorOffset;
 
       public SavedState() {
@@ -1235,21 +1258,23 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
       }
 
       SavedState(Parcel in) {
-         mAnchorPosition = in.readInt();
+         mAnchorSection = in.readInt();
+         mAnchorItem = in.readInt();
          mAnchorOffset = in.readInt();
       }
 
       public SavedState(SavedState other) {
-         mAnchorPosition = other.mAnchorPosition;
+         mAnchorSection = other.mAnchorSection;
+         mAnchorItem = other.mAnchorItem;
          mAnchorOffset = other.mAnchorOffset;
       }
 
       boolean hasValidAnchor() {
-         return mAnchorPosition >= 0;
+         return mAnchorSection >= 0;
       }
 
       void invalidateAnchor() {
-         mAnchorPosition = NO_POSITION;
+         mAnchorSection = NO_POSITION;
       }
 
       @Override
@@ -1259,7 +1284,8 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
 
       @Override
       public void writeToParcel(Parcel dest, int flags) {
-         dest.writeInt(mAnchorPosition);
+         dest.writeInt(mAnchorSection);
+         dest.writeInt(mAnchorItem);
          dest.writeInt(mAnchorOffset);
       }
 
