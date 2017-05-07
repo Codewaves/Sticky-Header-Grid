@@ -2,6 +2,7 @@ package com.codewaves.stickyheadergrid.sample;
 
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.RecyclerView;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -41,6 +42,17 @@ public class SampleActivity extends AppCompatActivity {
                default:
                   return 1;
             }
+         }
+      });
+
+      // Workaround RecyclerView limitation when playing remove animations. RecyclerView always
+      // puts the removed item on the top of other views and it will be drawn above sticky header.
+      // The only way to fix this, abandon remove animations :(
+      mRecycler.setItemAnimator(new DefaultItemAnimator() {
+         @Override
+         public boolean animateRemove(RecyclerView.ViewHolder holder) {
+            dispatchRemoveFinished(holder);
+            return false;
          }
       });
       mRecycler.setLayoutManager(mLayoutManager);
