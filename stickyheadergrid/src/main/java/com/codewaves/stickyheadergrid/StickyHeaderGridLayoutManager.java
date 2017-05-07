@@ -52,9 +52,7 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
    private SavedState mPendingSavedState;
    private int mPendingScrollPosition = NO_POSITION;
    private int mPendingScrollPositionOffset;
-   private int mFirstViewSection = NO_POSITION;
-   private int mFirstViewItem;
-   private int mFirstViewOffset;
+   private AnchorPosition mAnchor = new AnchorPosition();
 
    private final FillResult mFillResult = new FillResult();
    private ArrayList<LayoutRow> mLayoutRows = new ArrayList<>(DEFAULT_ROW_COUNT);
@@ -210,9 +208,9 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
 
       SavedState state = new SavedState();
       if (getChildCount() > 0) {
-         state.mAnchorSection = mFirstViewSection;
-         state.mAnchorItem = mFirstViewItem;
-         state.mAnchorOffset = mFirstViewOffset;
+         state.mAnchorSection = mAnchor.section;
+         state.mAnchorItem = mAnchor.item;
+         state.mAnchorOffset = mAnchor.offset;
       }
       else {
          state.invalidateAnchor();
@@ -312,15 +310,25 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
       return new PointF(0, targetPosition - firstRow.adapterPosition);
    }
 
+   private int getAdapterPositionFromAnchor(AnchorPosition anchor) {
+      if (anchor.section < 0 || anchor.section >= mAdapter.getSectionCount()) {
+         anchor.reset();
+         return NO_POSITION;
+      }
+      else if (anchor.item < 0 || anchor.item >= mAdapter.getSectionItemCount(anchor.section)) {
+         anchor.offset = 0;
+         return mAdapter.getSectionHeaderPosition(anchor.section);
+      }
+      return mAdapter.getSectionItemPosition(anchor.section, anchor.item);
+   }
+
    private int getAdapterPositionChecked(int section, int offset) {
       if (section < 0 || section >= mAdapter.getSectionCount()) {
          return NO_POSITION;
       }
-
-      if (offset < 0 || offset >= mAdapter.getSectionItemCount(section)) {
+      else if (offset < 0 || offset >= mAdapter.getSectionItemCount(section)) {
          return mAdapter.getSectionHeaderPosition(section);
       }
-
       return mAdapter.getSectionItemPosition(section, offset);
    }
 
@@ -344,8 +352,8 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
          mPendingSavedState = null;
       }
       else {
-         pendingAdapterPosition = getAdapterPositionChecked(mFirstViewSection, mFirstViewItem);
-         pendingAdapterOffset = mFirstViewOffset;
+         pendingAdapterPosition = getAdapterPositionFromAnchor(mAnchor);
+         pendingAdapterOffset = mAnchor.offset;
       }
 
       if (pendingAdapterPosition < 0 || pendingAdapterPosition >= state.getItemCount()) {
@@ -1053,16 +1061,14 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
 
    private void updateTopPosition() {
       if (getChildCount() == 0) {
-         mFirstViewSection = NO_POSITION;
-         mFirstViewItem = 0;
-         mFirstViewOffset = 0;
+         mAnchor.reset();
       }
 
       final LayoutRow firstVisibleRow = getFirstVisibleRow();
       if (firstVisibleRow != null) {
-         mFirstViewSection = mAdapter.getAdapterPositionSection(firstVisibleRow.adapterPosition);
-         mFirstViewItem = mAdapter.getItemSectionOffset(mFirstViewSection, firstVisibleRow.adapterPosition);
-         mFirstViewOffset = Math.min(firstVisibleRow.top - getPaddingTop(), 0);
+         mAnchor.section = mAdapter.getAdapterPositionSection(firstVisibleRow.adapterPosition);
+         mAnchor.item = mAdapter.getItemSectionOffset(mAnchor.section, firstVisibleRow.adapterPosition);
+         mAnchor.offset = Math.min(firstVisibleRow.top - getPaddingTop(), 0);
       }
    }
 
@@ -1338,5 +1344,21 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
       private int adapterPosition;
       private int length;
       private int height;
+   }
+
+   private static class AnchorPosition {
+      private int section;
+      private int item;
+      private int offset;
+
+      public AnchorPosition() {
+         reset();
+      }
+
+      public void reset() {
+         section = NO_POSITION;
+         item = 0;
+         offset = 0;
+      }
    }
 }
