@@ -1125,6 +1125,13 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
          return 0;
       }
 
+      final int recyclerTop = getPaddingTop();
+      final LayoutRow topRow = getTopRow();
+      final int scrollChunk = Math.max(-topRow.top + recyclerTop, 0);
+      if (scrollChunk == 0) {
+         return 0;
+      }
+
       final int minPosition = Math.min(getPosition(startChild), getPosition(endChild));
       final int maxPosition = Math.max(getPosition(startChild), getPosition(endChild));
       return Math.max(0, minPosition);
