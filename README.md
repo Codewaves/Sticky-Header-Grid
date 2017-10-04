@@ -12,7 +12,7 @@ Android RecyclerView sticky header list/grid layout.
 
 Download [the latest AAR][1] or grab via Gradle:
 ```groovy
-compile 'com.codewaves.stickyheadergrid:stickyheadergrid:0.9.4'
+compile 'com.codewaves.stickyheadergrid:stickyheadergrid:0.9.5'
 ```
 
 ## Features

@@ -586,7 +586,7 @@ public abstract class StickyHeaderGridAdapter extends RecyclerView.Adapter<Stick
       }
    }
 
-   private void notifySectionItemRangeRemoved(int section, int position, int count) {
+   public void notifySectionItemRangeRemoved(int section, int position, int count) {
       if (mSections == null) {
          calculateSections();
          notifyAllSectionsDataSetChanged();
