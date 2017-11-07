@@ -503,7 +503,7 @@ public class StickyHeaderGridLayoutManager extends RecyclerView.LayoutManager im
 
       // Create phase
       Arrays.fill(mFillViewSet, null);
-      while (spanIndex < mSpanCount) {
+      while (spanIndex + spanSize <= mSpanCount) {
          // Create view and fill layout params
          final int spanWidth = getSpanWidth(recyclerWidth, spanIndex, spanSize);
          final View v = recycler.getViewForPosition(adapterPosition);
