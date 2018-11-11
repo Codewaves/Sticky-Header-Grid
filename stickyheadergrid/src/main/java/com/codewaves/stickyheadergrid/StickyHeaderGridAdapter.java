@@ -66,9 +66,10 @@ public abstract class StickyHeaderGridAdapter extends RecyclerView.Adapter<Stick
 
    private void calculateSections() {
       mSections = new ArrayList<>();
-
+      
+      int ns = getSectionCount();
       int total = 0;
-      for (int s = 0, ns = getSectionCount(); s < ns; s++) {
+      for (int s = 0; s < ns; s++) {
          final Section section = new Section();
          section.position = total;
          section.itemNumber = getSectionItemCount(s);
@@ -81,7 +82,7 @@ public abstract class StickyHeaderGridAdapter extends RecyclerView.Adapter<Stick
 
       total = 0;
       mSectionIndices = new int[mTotalItemNumber];
-      for (int s = 0, ns = getSectionCount(); s < ns; s++) {
+      for (int s = 0; s < ns; s++) {
          final Section section = mSections.get(s);
          for (int i = 0; i < section.length; i++) {
             mSectionIndices[total + i] = s;
