@@ -1,5 +1,6 @@
 package com.codewaves.stickyheadergrid;
 
+import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
 import android.view.View;
 import android.view.ViewGroup;
@@ -68,7 +69,8 @@ public abstract class StickyHeaderGridAdapter extends RecyclerView.Adapter<Stick
       mSections = new ArrayList<>();
 
       int total = 0;
-      for (int s = 0, ns = getSectionCount(); s < ns; s++) {
+      int sectionCount = getSectionCount();
+      for (int s = 0; s < sectionCount; s++) {
          final Section section = new Section();
          section.position = total;
          section.itemNumber = getSectionItemCount(s);
@@ -81,7 +83,7 @@ public abstract class StickyHeaderGridAdapter extends RecyclerView.Adapter<Stick
 
       total = 0;
       mSectionIndices = new int[mTotalItemNumber];
-      for (int s = 0, ns = getSectionCount(); s < ns; s++) {
+      for (int s = 0; s < sectionCount; s++) {
          final Section section = mSections.get(s);
          for (int i = 0; i < section.length; i++) {
             mSectionIndices[total + i] = s;
@@ -118,8 +120,9 @@ public abstract class StickyHeaderGridAdapter extends RecyclerView.Adapter<Stick
       return mTotalItemNumber;
    }
 
+   @NonNull
    @Override
-   final public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+   final public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
       final int internalType = internalViewType(viewType);
       final int externalType = externalViewType(viewType);
 
@@ -134,7 +137,7 @@ public abstract class StickyHeaderGridAdapter extends RecyclerView.Adapter<Stick
    }
 
    @Override
-   final public void onBindViewHolder(ViewHolder holder, int position) {
+   final public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
       if (mSections == null) {
          calculateSections();
       }

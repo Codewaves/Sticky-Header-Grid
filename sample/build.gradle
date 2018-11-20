@@ -24,7 +24,7 @@ android {
 }
 
 dependencies {
-    compile 'com.android.support:appcompat-v7:' + versions.supportLib
-    compile 'com.android.support:design:' + versions.supportLib
-    compile project(':stickyheadergrid')
+    implementation 'com.android.support:appcompat-v7:' + versions.supportLib
+    implementation 'com.android.support:design:' + versions.supportLib
+    implementation project(':stickyheadergrid')
 }
